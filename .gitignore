@@ -1,6 +1,6 @@
 /vendor/
-/temp/*
-/log/*
+/temp/
+/log/
 /config/credentials.json
 /config/config.json
 /.DS_Store

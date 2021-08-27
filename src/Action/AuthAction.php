@@ -26,8 +26,6 @@ class AuthAction
 
         $client = new GoogleApi($this->logger, $this->config, $code);
 
-        $this->logger->info($_SERVER['HTTP_HOST'] . ' - ' . $_SERVER['PHP_SELF']);
-
         $response->getBody()->write('<p align=center>' . $client->message . '</p>');
 
         return $response;

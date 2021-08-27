@@ -18,6 +18,12 @@ use RetailCrm\Api\Enum\CustomFields\CustomFieldEntity;
 use App\Config;
 use Psr\Log\LoggerInterface;
 
+use RetailCrm\Api\Enum\CustomFields\CustomFieldDisplayArea;
+use RetailCrm\Api\Enum\CustomFields\CustomFieldType;
+use RetailCrm\Api\Enum\CustomFields\CustomFieldViewMode;
+use RetailCrm\Api\Model\Entity\CustomFields\CustomField;
+use RetailCrm\Api\Model\Request\CustomFields\CustomFieldsCreateRequest;
+
 
 class SimlaApi
 {
@@ -44,16 +50,14 @@ class SimlaApi
         $this->client = SimpleClientFactory::createClient($this->apiUrl, $this->apiKey);
     }
 
-    public function getHistory($full = false)
+    public function getHistory()
     {
         $history = [];
 
         $apiRequest = new OrdersHistoryRequest();
         $apiRequest->filter = new OrderHistoryFilterV4Type();
         $apiRequest->limit = PaginationLimit::LIMIT_100;
-        if (!$full) {
-            $apiRequest->filter->sinceId = $this->historyId;
-        }
+        $apiRequest->filter->sinceId = $this->historyId;
 
         do {
             time_nanosleep(0, 100000000); // 10 requests per second
@@ -63,6 +67,10 @@ class SimlaApi
             } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
                 $this->logger->error($exception->getMessage());
                 continue;
+            }
+
+            if (empty($apiResponse->history)) {
+                break;
             }
 
             $history = array_merge($history, $apiResponse->history);
@@ -78,7 +86,7 @@ class SimlaApi
         try {
             $apiResponse = $this->client->orders->get($change->order->id, new BySiteRequest(ByIdentifier::ID, $change->order->site));
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error($exception->getMessage());
+            $this->logger->error('Getting order #' . $change->order->id . ': ' . $exception->getMessage());
             return false;
         }
 
@@ -94,7 +102,7 @@ class SimlaApi
         try {
             $apiResponse = $this->client->files->list($apiRequest);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error($exception->getMessage());
+            $this->logger->error('Getting file list of order #' . $orderId . ': ' . $exception->getMessage());
             return false;
         }
 
@@ -106,7 +114,7 @@ class SimlaApi
         try {
             $apiResponse = $this->client->files->download($fileId);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error($exception->getMessage());
+            $this->logger->error('Downloading file #' . $fileId . ': ' . $exception->getMessage());
             return false;
         }
 
@@ -124,7 +132,7 @@ class SimlaApi
         try {
             $apiResponse = $this->client->orders->edit($order->id, $apiRequest);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error($exception->getMessage());
+            $this->logger->error('Editing order #' . $order->id . ': ' . $exception->getMessage());
             return false;
         }
 
@@ -136,7 +144,7 @@ class SimlaApi
         try {
             $apiResponse = $this->client->customFields->get(CustomFieldEntity::ORDER, 'google_calendar_id');
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error($exception->getMessage());
+            $this->logger->error('Custom field: ' . $exception->getMessage());
             
             if ($exception->getStatusCode() == 404) {
                 return false;
@@ -145,4 +153,33 @@ class SimlaApi
 
         return true;
     }
+
+    /*
+    public function createCustomField()
+    {
+        $field                 = new CustomField();
+        $field->name           = 'Description';
+        $field->code           = 'description';
+        $field->type           = CustomFieldType::STRING;
+        $field->ordering       = 10;
+        $field->displayArea    = CustomFieldDisplayArea::CUSTOMER;
+        $field->viewMode       = CustomFieldViewMode::EDITABLE;
+        $field->inFilter       = true;
+        $field->inList         = true;
+        $field->inGroupActions = true;
+
+        try {
+            $apiResponse = $this->client->customFields->create(
+                CustomFieldEntity::CUSTOMER,
+                new CustomFieldsCreateRequest($field)
+            );
+        } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
+            $this->logger->error('Creating custom field: ' . $exception->getMessage());
+            echo $exception;
+            return false;
+        }
+
+        echo 'Created field ' . print_r($apiResponse->code, true);
+    }
+    */
 }

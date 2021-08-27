@@ -35,7 +35,7 @@ class HistoryResetCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (empty($history = $this->simlaApi->getHistory(true))) {
+        if (empty($history = $this->simlaApi->getHistory())) {
             $output->writeln('History is empty!');
 
             return Command::FAILURE;

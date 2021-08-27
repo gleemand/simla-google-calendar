@@ -7,7 +7,7 @@ use App\Command\SyncCommand;
 use App\Command\LogoutCommand;
 
 require __DIR__ . '/../vendor/autoload.php';
-require __DIR__ . '/../config/container.php';
+require __DIR__ . '/../container/container.php';
 
 $app = new Application();
 

@@ -44,7 +44,8 @@ class SyncCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->simlaApi->isCustomFieldExist()) {
-            $this->logger->error('Create custom field with code \'google_calendar_id\' for CRM orders first');
+            $this->logger->error('You have to create custom field with code \'google_calendar_id\' for CRM orders');
+            //$this->simlaApi->createCustomField();
             return Command::FAILURE;
         }
 
@@ -58,7 +59,6 @@ class SyncCommand extends Command
             $toUpdate = false;
 
             if ($change->order->status !== $this->orderStatus) {
-                $this->logger->warning('#' . $change->order->id . ' Not in tracked status. Skipping...');
                 continue;
             }
 
@@ -77,7 +77,6 @@ class SyncCommand extends Command
             }
 
             if ($toUpdate === false && isset($order->customFields['google_calendar_id'])) {
-                $this->logger->warning('#' . $change->order->id . ' Nothing to update. Skipping...');
                 continue;
             }
 
@@ -88,6 +87,10 @@ class SyncCommand extends Command
                     foreach ($files as $file) {
                         if (($downloadedFile = $this->simlaApi->downloadFile($file->id)) === false) {
                             continue;
+                        }
+
+                        if (!is_dir('temp')) {
+                            mkdir('temp');
                         }
 
                         file_put_contents('./temp/' . $downloadedFile->fileName, $downloadedFile->data->getContents());
