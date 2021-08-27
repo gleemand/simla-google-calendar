@@ -1,0 +1,18 @@
+#!/usr/bin/env php
+<?php
+
+use Symfony\Component\Console\Application;
+use App\Command\HistoryResetCommand;
+use App\Command\SyncCommand;
+use App\Command\LogoutCommand;
+
+require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../config/container.php';
+
+$app = new Application();
+
+$app->add($container->get(LogoutCommand::class));
+$app->add($container->get(HistoryResetCommand::class));
+$app->add($container->get(SyncCommand::class));
+
+$app->run();
