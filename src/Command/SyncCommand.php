@@ -44,13 +44,14 @@ class SyncCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         if (!$this->simlaApi->isCustomFieldExist()) {
-            $this->logger->error('You have to create custom field with code \'google_calendar_id\' for CRM orders');
-            //$this->simlaApi->createCustomField();
-            return Command::FAILURE;
+            if (!$this->simlaApi->createCustomField()) {
+                return Command::FAILURE;
+            }
         }
 
         if (empty($history = $this->simlaApi->getHistory())) {
             $this->logger->info('History is up to date!');
+            
             return Command::SUCCESS;
         }
 
@@ -117,7 +118,7 @@ class SyncCommand extends Command
 
         $this->config->set('simla_history_id', $historyId);
 
-        $this->logger->info("History index updated to $historyId");
+        $this->logger->info("Done! History index updated to $historyId");
 
         return Command::SUCCESS;
     }

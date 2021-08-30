@@ -66,6 +66,7 @@ class SimlaApi
                 $apiResponse = $this->client->orders->history($apiRequest);
             } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
                 $this->logger->error($exception->getMessage());
+
                 continue;
             }
 
@@ -87,6 +88,7 @@ class SimlaApi
             $apiResponse = $this->client->orders->get($change->order->id, new BySiteRequest(ByIdentifier::ID, $change->order->site));
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Getting order #' . $change->order->id . ': ' . $exception->getMessage());
+
             return false;
         }
 
@@ -103,6 +105,7 @@ class SimlaApi
             $apiResponse = $this->client->files->list($apiRequest);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Getting file list of order #' . $orderId . ': ' . $exception->getMessage());
+
             return false;
         }
 
@@ -115,6 +118,7 @@ class SimlaApi
             $apiResponse = $this->client->files->download($fileId);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Downloading file #' . $fileId . ': ' . $exception->getMessage());
+
             return false;
         }
 
@@ -133,6 +137,7 @@ class SimlaApi
             $apiResponse = $this->client->orders->edit($order->id, $apiRequest);
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Editing order #' . $order->id . ': ' . $exception->getMessage());
+
             return false;
         }
 
@@ -144,42 +149,35 @@ class SimlaApi
         try {
             $apiResponse = $this->client->customFields->get(CustomFieldEntity::ORDER, 'google_calendar_id');
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error('Custom field: ' . $exception->getMessage());
-            
-            if ($exception->getStatusCode() == 404) {
-                return false;
-            }
+            $this->logger->error('Custom field \'google_calendar_id\': ' . $exception->getMessage());
+
+            return false;
         }
 
         return true;
     }
 
-    /*
     public function createCustomField()
     {
         $field                 = new CustomField();
-        $field->name           = 'Description';
-        $field->code           = 'description';
+        $field->name           = 'Google Calendar ID';
+        $field->code           = 'google_calendar_id';
         $field->type           = CustomFieldType::STRING;
-        $field->ordering       = 10;
-        $field->displayArea    = CustomFieldDisplayArea::CUSTOMER;
-        $field->viewMode       = CustomFieldViewMode::EDITABLE;
-        $field->inFilter       = true;
-        $field->inList         = true;
-        $field->inGroupActions = true;
+        $field->viewMode       = CustomFieldViewMode::NOT_EDITABLE;
 
         try {
             $apiResponse = $this->client->customFields->create(
-                CustomFieldEntity::CUSTOMER,
+                CustomFieldEntity::ORDER,
                 new CustomFieldsCreateRequest($field)
             );
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Creating custom field: ' . $exception->getMessage());
-            echo $exception;
+
             return false;
         }
 
-        echo 'Created field ' . print_r($apiResponse->code, true);
+        $this->logger->error('Custom field created in CRM');
+
+        return true;
     }
-    */
 }

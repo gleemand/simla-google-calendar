@@ -47,6 +47,7 @@ class HistoryResetCommand extends Command
 
         if ($historyId != $storedHistoryId) {
             $this->config->set('simla_history_id', $historyId);
+            
             $output->writeln('History index updated to ' . $historyId);
         } else {
             $output->writeln('History index is up to date. Nothing to reset.');

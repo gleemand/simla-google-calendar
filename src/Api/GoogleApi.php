@@ -39,15 +39,15 @@ class GoogleApi
 
         $this->simlaUrl = $this->config->get('simla_api_url');
 
-        $client = new Client();
-        $client->setApplicationName('Simla to Google Calendar');
-        $client->addScope(Calendar::CALENDAR_EVENTS);
-        $client->addScope(Drive::DRIVE_FILE);
-        $client->setAuthConfig(__DIR__ . '/../../' . $this->credentials);
-        $client->setRedirectUri($this->redirectUrl);
-        $client->setAccessType('offline');
-        $client->setPrompt('select_account consent');
-        $this->client = $this->authClient($client, $code);
+        $this->client = new Client();
+        $this->client->setApplicationName('Simla to Google Calendar');
+        $this->client->addScope(Calendar::CALENDAR_EVENTS);
+        $this->client->addScope(Drive::DRIVE_FILE);
+        $this->client->setAuthConfig(__DIR__ . '/../../' . $this->credentials);
+        $this->client->setRedirectUri($this->redirectUrl);
+        $this->client->setAccessType('offline');
+        $this->client->setPrompt('select_account consent');
+        $this->client = $this->authClient($this->client, $code);
     }
 
     public function uploadFile($fileToUpload, $order)
@@ -97,7 +97,9 @@ class GoogleApi
         ));
 
         $event = $serviceCalendar->events->insert($this->calendarId, $event, ['supportsAttachments' => true]);
+
         $this->logger->info("Event for order #$order->id created");
+
         return $event;
     }
 
@@ -125,25 +127,23 @@ class GoogleApi
 
     public function authClient($client, $code = null)
     {
-        // Load previously authorized token from a file, if it exists.
         if (!empty($accessToken = json_decode($this->token, true))) {
             $client->setAccessToken($accessToken);
         }
 
-        // If there is no previous token or it's expired.
         if ($client->isAccessTokenExpired()) {
-            // Refresh the token if possible, else fetch a new one.
             if ($client->getRefreshToken()) {
                 $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
 
                 $this->config->set('google_token', json_encode($client->getAccessToken()));
+
                 $this->logger->info('Google token is updated');
             } else {
-                // Request authorization from the user.
                 $authUrl = $client->createAuthUrl();
 
                 if ($code == null) {
                     $this->message = '<button onclick="document.location=\'' . $authUrl . '\'">Connect your Google account to Simla.com</button>';
+
                     $this->logger->error('You have to log in by your Google account');
 
                     return $client;
@@ -151,16 +151,15 @@ class GoogleApi
                     $authCode = $code;
                 }
 
-                // Exchange authorization code for an access token.
                 $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
                 $client->setAccessToken($accessToken);
 
-                // Check to see if there was an error.
                 if (array_key_exists('error', $accessToken)) {
                     throw new \Exception(join(', ', $accessToken));
                 }
 
                 $this->config->set('google_token', json_encode($client->getAccessToken()));
+
                 $this->logger->info('Google token is stored');
             }
         }

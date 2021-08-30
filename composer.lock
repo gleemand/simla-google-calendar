@@ -2562,16 +2562,16 @@
         },
         {
             "name": "retailcrm/api-client-php",
-            "version": "v6.1.2",
+            "version": "v6.1.3",
             "source": {
                 "type": "git",
                 "url": "https://github.com/retailcrm/api-client-php.git",
-                "reference": "2282f2bb4c74277bd2f541a8caee9f28b78c536e"
+                "reference": "1a5c972842b2e0546a1e88a50fc57b1899e6647e"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/retailcrm/api-client-php/zipball/2282f2bb4c74277bd2f541a8caee9f28b78c536e",
-                "reference": "2282f2bb4c74277bd2f541a8caee9f28b78c536e",
+                "url": "https://api.github.com/repos/retailcrm/api-client-php/zipball/1a5c972842b2e0546a1e88a50fc57b1899e6647e",
+                "reference": "1a5c972842b2e0546a1e88a50fc57b1899e6647e",
                 "shasum": ""
             },
             "require": {
@@ -2661,9 +2661,9 @@
             "support": {
                 "email": "support@retailcrm.pro",
                 "issues": "https://github.com/retailcrm/api-client-php/issues",
-                "source": "https://github.com/retailcrm/api-client-php/tree/v6.1.2"
+                "source": "https://github.com/retailcrm/api-client-php/tree/v6.1.3"
             },
-            "time": "2021-08-25T12:47:32+00:00"
+            "time": "2021-08-30T06:50:10+00:00"
         },
         {
             "name": "slim/psr7",
