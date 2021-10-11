@@ -1,0 +1,103 @@
+* {
+    font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Oxygen,Ubuntu,Cantarell,Fira Sans,Droid Sans,Helvetica Neue,sans-serif;
+}
+div {
+    margin-block-start: 15px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+body {
+    background-color: #efefef;
+}
+.auth_button {
+    cursor: pointer;
+    border: none;
+    width: 171.9px;
+    height: 41.4px;
+}
+.label-common {
+    color: #636f7f;
+    font-size: 13px;
+    line-height: 28px;
+    float: left;
+    display: block;
+    width: 120px;
+    font-style: normal;
+    padding: 6px 10px 0 0;
+}
+.label-value {
+    color: #636f7f;
+    font-size: 13px;
+    line-height: 1.2;
+    float: left;
+    display: block;
+    width: calc(100% - 185px);
+    max-width: 280px;
+    font-style: normal;
+    padding: 6px 10px 0 0;
+}
+.input-field {
+    color: #1e2248;
+    border: 1px solid #d9d9d9;
+    padding: 1px 10px;
+    font-size: 13px;
+    line-height: 28px;
+    height: 30px;
+    border-radius: 3px;
+    width: calc(100% - 185px);
+    max-width: 280px;
+    float: left;
+    box-shadow: inset 0 1px 3px 0 rgb(0 0 0 / 8%);
+    margin-top: 5px;
+}
+.logout-button:active {
+    color: #1e2248;
+    border-color: #afb9c3;
+}
+.logout-button:hover {
+    background: #f4f6f8;
+}
+.logout-button {
+    cursor: pointer;
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 14px;
+    line-height: 20px;
+    height: 36px;
+    width: 150px;
+    font-weight: 400;
+    border-radius: 6px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#fff),to(#e9ecee));
+    background-image: linear-gradient(180deg,#fff,#e9ecee);
+    padding: 7px 20px 8px;
+    font-weight: 500;
+}
+.submit-button:active {
+    background-color: #20a77f;
+}
+.submit-button:hover {
+    background: #22c993;
+}
+.submit-button {
+    margin-top: 15px;
+    cursor: pointer;
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 14px;
+    line-height: 20px;
+    height: 36px;
+    width: 150px;
+    font-weight: 400;
+    border-radius: 6px;
+    background-color: #fff;
+    border: 1px solid #dee2e6;
+    background-image: -webkit-gradient(linear,left top,left bottom,from(#22c993),to(#20a77f));
+    background-image: linear-gradient(180deg,#22c993,#20a77f);
+    padding: 7px 20px 8px;
+    color: #fff;
+    font-weight: 500;
+}

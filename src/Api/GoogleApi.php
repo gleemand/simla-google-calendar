@@ -4,7 +4,9 @@ namespace App\Api;
 
 use Google\Client;
 use Google\Service\Calendar;
+use Google\Service\Oauth2;
 use Google\Service\Calendar\Event;
+use Google\Service\Calendar\EventDateTime;
 use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
 use App\Config;
@@ -14,8 +16,8 @@ class GoogleApi
 {
     private $logger;
 
-    public $message;
-    
+    public $userId;
+
     private $config;
 
     private $client;
@@ -28,26 +30,40 @@ class GoogleApi
 
     private $simlaUrl;
 
-    public function __construct(LoggerInterface $logger, Config $config, $code = null)
+    private $code;
+
+    public function __construct(LoggerInterface $logger, Config $config, $userId = null)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->credentials = $this->config->get('google_credentials_file');
-        $this->token = $this->config->get('google_token');
-        $this->redirectUrl = $this->config->get('google_redirect_url');
-        $this->calendarId = $this->config->get('google_calendar_id');
+        $this->credentials = $this->config->get('main', 'google_credentials_file');
+        $this->token = $this->config->get($userId, 'google_token');
+        $this->redirectUrl = $this->config->get('main', 'google_redirect_url');
+        $this->calendarId = $this->config->get($userId, 'google_calendar_id');
 
-        $this->simlaUrl = $this->config->get('simla_api_url');
+        $this->simlaUrl = $this->config->get($userId, 'simla_api_url');
 
+        $this->newClient();
+    }
+
+    public function newClient()
+    {
         $this->client = new Client();
+        $this->client->setLogger($this->logger);
         $this->client->setApplicationName('Simla to Google Calendar');
         $this->client->addScope(Calendar::CALENDAR_EVENTS);
         $this->client->addScope(Drive::DRIVE_FILE);
+        $this->client->addScope(Oauth2::USERINFO_EMAIL);
         $this->client->setAuthConfig(__DIR__ . '/../../' . $this->credentials);
         $this->client->setRedirectUri($this->redirectUrl);
         $this->client->setAccessType('offline');
         $this->client->setPrompt('select_account consent');
-        $this->client = $this->authClient($this->client, $code);
+        $this->client = $this->authClient();
+    }
+
+    public function generateAuthUrl()
+    {
+        return $this->client->createAuthUrl();
     }
 
     public function uploadFile($fileToUpload, $order)
@@ -74,6 +90,8 @@ class GoogleApi
     {
         $serviceCalendar = new Calendar($this->client);
 
+        $date = $this->prepareDate($order, false);
+
         $event = new Event(array(
             'summary' => 'Order #' . $order->id,
             'description' =>    '<ul>' .
@@ -84,10 +102,10 @@ class GoogleApi
                                     '<li><b>Description: </b>' . $order->customerComment . " " . $order->managerComment . '</li>' .
                                 '</ul>',
             'start' => array(
-                'date' => date_format($order->createdAt, 'Y-m-d'),
+                'dateTime' => $date['start'],
             ),
             'end' => array(
-                'date' => date_format($order->createdAt, 'Y-m-d'),
+                'dateTime' => $date['end'],
             ),
             'source' => array(
                 'title' => 'Manage on Simla.com',
@@ -107,8 +125,22 @@ class GoogleApi
     {
         $serviceCalendar = new Calendar($this->client);
 
-        $eventId = $order->customFields['google_calendar_id'];
+        $date = $this->prepareDate($order);
+
+        $startDate = new EventDateTime();
+        $startDate->setDateTime($date['start']);
+
+        $endDate = new EventDateTime();
+        $endDate->setDateTime($date['end']);
+
+        $eventId = $order->customFields['event_id'];
         $event = $serviceCalendar->events->get($this->calendarId, $eventId);
+
+        if ($event->status == 'cancelled') {
+            $this->logger->error("Event for order #$order->id is cancelled");
+            return false;
+        }
+
         $event->setDescription(
             '<ul>' .
             '<li><b>Order #</b>' . $order->id . '</li>' .
@@ -118,6 +150,9 @@ class GoogleApi
             '<li><b>Description: </b>' . $order->customerComment . " " . $order->managerComment . '</li>' .
             '</ul>'
         );
+
+        $event->setStart($startDate);
+        $event->setEnd($endDate);
         $serviceCalendar->events->update($this->calendarId, $event->getId(), $event);
 
         $this->logger->info("Event for order #$order->id updated");
@@ -125,47 +160,87 @@ class GoogleApi
         return true;
     }
 
-    public function authClient($client, $code = null)
+    public function authClient($code = null)
     {
         if (!empty($accessToken = json_decode($this->token, true))) {
-            $client->setAccessToken($accessToken);
+            $this->client->setAccessToken($accessToken);
         }
 
-        if ($client->isAccessTokenExpired()) {
-            if ($client->getRefreshToken()) {
-                $client->fetchAccessTokenWithRefreshToken($client->getRefreshToken());
+        if ($this->client->isAccessTokenExpired()) {
+            if ($this->client->getRefreshToken()) {
+                $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
 
-                $this->config->set('google_token', json_encode($client->getAccessToken()));
+                $this->config->set($this->userId, 'google_token', json_encode($this->client->getAccessToken()));
 
                 $this->logger->info('Google token is updated');
             } else {
-                $authUrl = $client->createAuthUrl();
-
                 if ($code == null) {
-                    $this->message = '<button onclick="document.location=\'' . $authUrl . '\'">Connect your Google account to Simla.com</button>';
+                    $this->logger->error('Code from google is absente');
 
-                    $this->logger->error('You have to log in by your Google account');
-
-                    return $client;
-                } else {
-                    $authCode = $code;
+                    return $this->client;
                 }
 
-                $accessToken = $client->fetchAccessTokenWithAuthCode($authCode);
-                $client->setAccessToken($accessToken);
+                $accessToken = $this->client->fetchAccessTokenWithAuthCode($code);
+                $this->client->setAccessToken($accessToken);
 
                 if (array_key_exists('error', $accessToken)) {
                     throw new \Exception(join(', ', $accessToken));
+
+                    $this->config->set($this->userId, 'google_token', '');
+                    $this->logger->info('Logged out');
+                } else {
+                    $token = $this->client->getAccessToken();
+                    $this->userId = $this->getUserFromToken();
+                    $this->config->set($this->userId, 'google_token', json_encode($token));
+                    $this->logger->info('Google token is stored');
                 }
-
-                $this->config->set('google_token', json_encode($client->getAccessToken()));
-
-                $this->logger->info('Google token is stored');
             }
         }
 
-        $this->message = 'Your Google account is connected';
+        return $this->client;
+    }
 
-        return $client;
+    public function getUserFromToken() {
+        $data = $this->client->verifyIdToken();
+
+        if (
+            $data
+            && isset($data['email_verified'])
+            && $data['email_verified'] == 1
+        ) {
+            return $data['email'];
+        }
+
+        return false;
+    }
+
+    private function prepareDate($order)
+    {
+        $date = [];
+
+        if (
+            isset($order->customFields['event_date'])
+            && !empty($order->customFields['event_date'])
+            && isset($order->customFields['event_time_start'])
+            && !empty($order->customFields['event_time_start'])
+            && isset($order->customFields['event_time_end'])
+            && !empty($order->customFields['event_time_end'])
+        ) {
+            $date['start'] = date_format(date_create(
+                $order->customFields['event_date'] .
+                $order->customFields['event_time_start'] .
+                '+03'),
+            DATE_RFC3339);
+            $date['end'] = date_format(date_create(
+                $order->customFields['event_date'] .
+                $order->customFields['event_time_end'] .
+                '+03'),
+            DATE_RFC3339);
+        } else {
+            $date['start'] = date_format($order->createdAt, DATE_RFC3339);
+            $date['end'] = $date['start'];
+        }
+
+        return $date;
     }
 }

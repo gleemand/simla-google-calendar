@@ -7,6 +7,7 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use App\Config;
 use App\Api\SimlaApi;
+use App\Api\GoogleApi;
 use Psr\Log\LoggerInterface;
 
 class HistoryResetCommand extends Command
@@ -19,11 +20,10 @@ class HistoryResetCommand extends Command
 
     private $config;
 
-    public function __construct(LoggerInterface $logger, Config $config, SimlaApi $simlaApi)
+    public function __construct(LoggerInterface $logger, Config $config)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->simlaApi = $simlaApi;
 
         parent::__construct();
     }
@@ -35,22 +35,37 @@ class HistoryResetCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (empty($history = $this->simlaApi->getHistory())) {
-            $output->writeln('History is empty!');
+        foreach ($this->config->config as $userId => $config) {
+            if ($userId == 'main' || $userId == '') {
+                continue;
+            }
 
-            return Command::FAILURE;
-        }
+            $output->writeln($userId . ': HystoryReset starting...');
 
-        $historyId = end($history)->id;
+            $this->simlaApi = new SimlaApi($this->logger, $this->config, $userId);
+            $this->googleApi = new GoogleApi($this->logger, $this->config, $userId);
 
-        $storedHistoryId = $this->config->get('simla_history_id');
+            if (!$this->simlaApi->checkApi()) {
+                continue;
+            }
 
-        if ($historyId != $storedHistoryId) {
-            $this->config->set('simla_history_id', $historyId);
-            
-            $output->writeln('History index updated to ' . $historyId);
-        } else {
-            $output->writeln('History index is up to date. Nothing to reset.');
+            if (empty($history = $this->simlaApi->getHistory())) {
+                $output->writeln($userId . ': History index is up to date. Nothing to reset.');
+
+                return Command::FAILURE;
+            }
+
+            $historyId = end($history)->id;
+
+            $storedHistoryId = $this->config->get($userId, 'simla_history_id');
+
+            if ($historyId != $storedHistoryId) {
+                $this->config->set($userId, 'simla_history_id', $historyId);
+
+                $output->writeln($userId . ': History index updated to ' . $historyId);
+            }
+
+            sleep(1);
         }
 
         return Command::SUCCESS;

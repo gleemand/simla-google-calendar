@@ -39,13 +39,53 @@ class SimlaApi
 
     private $client;
 
-    public function __construct(LoggerInterface $logger, Config $config)
+    private static $customFields = [
+        [
+            'code' => 'event_id',
+            'name' => 'Event ID',
+            'viewMode' => 'not_editable',
+            'type' => 'string',
+            'displayArea' => 'customer',
+
+        ],
+        [
+            'code' => 'event_url',
+            'name' => 'Event URL',
+            'viewMode' => 'not_editable',
+            'type' => 'string',
+            'displayArea' => 'customer',
+
+        ],
+        [
+            'code' => 'event_date',
+            'name' => 'Event date',
+            'viewMode' => 'editable',
+            'type' => 'date',
+            'displayArea' => 'customer',
+        ],
+        [
+            'code' => 'event_time_start',
+            'name' => 'Event start time (MSK, 00:00)',
+            'viewMode' => 'editable',
+            'type' => 'string',
+            'displayArea' => 'customer',
+        ],
+        [
+            'code' => 'event_time_end',
+            'name' => 'Event end time (MSK, 00:00)',
+            'viewMode' => 'editable',
+            'type' => 'string',
+            'displayArea' => 'customer',
+        ],
+    ];
+
+    public function __construct(LoggerInterface $logger, Config $config, $userId = null)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->apiUrl = $this->config->get('simla_api_url');
-        $this->apiKey = $this->config->get('simla_api_key');
-        $this->historyId = $this->config->get('simla_history_id');
+        $this->apiUrl = $this->config->get($userId, 'simla_api_url');
+        $this->apiKey = $this->config->get($userId, 'simla_api_key');
+        $this->historyId = $this->config->get($userId, 'simla_history_id');
 
         $this->client = SimpleClientFactory::createClient($this->apiUrl, $this->apiKey);
     }
@@ -125,11 +165,24 @@ class SimlaApi
         return $apiResponse;
     }
 
-    public function putEventIdToOrder($order, $eventId)
+    public function putEventDataToOrder($order, $event)
+    {
+        if (!$this->putDataToOrder($order, 'event_id', $event->id)) {
+            return false;
+        }
+
+        if (!$this->putDataToOrder($order, 'event_url', $event->htmlLink)) {
+            return false;
+        }
+
+        return true;
+    }
+
+    public function putDataToOrder($order, $field, $data)
     {
         $apiRequest = new OrdersEditRequest();
         $apiRequest->order = new Order();
-        $apiRequest->order->customFields['google_calendar_id'] = $eventId;
+        $apiRequest->order->customFields[$field] = $data;
         $apiRequest->site = $order->site;
         $apiRequest->by = ByIdentifier::ID;
 
@@ -144,26 +197,35 @@ class SimlaApi
         return true;
     }
 
-    public function isCustomFieldExist()
+    public function createCustomFields()
     {
-        try {
-            $apiResponse = $this->client->customFields->get(CustomFieldEntity::ORDER, 'google_calendar_id');
-        } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error('Custom field \'google_calendar_id\': ' . $exception->getMessage());
+        foreach (self::$customFields as $customField) {
+            try {
+                $apiResponse = $this->client->customFields->get(CustomFieldEntity::ORDER, $customField['code']);
+            } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
+                $this->logger->error('Custom field \'' . $customField['code'] . '\': ' . $exception->getMessage());
 
-            return false;
+                if ($exception->getCode() == 404) {
+                    if (!$this->createCustomField($customField)) {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+            }
         }
 
         return true;
     }
 
-    public function createCustomField()
+    private function createCustomField($customField)
     {
         $field                 = new CustomField();
-        $field->name           = 'Google Calendar ID';
-        $field->code           = 'google_calendar_id';
-        $field->type           = CustomFieldType::STRING;
-        $field->viewMode       = CustomFieldViewMode::NOT_EDITABLE;
+        $field->name           = $customField['name'];
+        $field->code           = $customField['code'];
+        $field->type           = $customField['type'];
+        $field->viewMode       = $customField['viewMode'];
+        $field->displayArea    = $customField['displayArea'];
 
         try {
             $apiResponse = $this->client->customFields->create(
@@ -171,12 +233,25 @@ class SimlaApi
                 new CustomFieldsCreateRequest($field)
             );
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
-            $this->logger->error('Creating custom field: ' . $exception->getMessage());
+            $this->logger->error('Creating custom field \'' . $customField['code'] . '\': ' . $exception->getMessage());
 
             return false;
         }
 
-        $this->logger->error('Custom field created in CRM');
+        $this->logger->error('Custom field \'' . $customField['code'] . '\' created in CRM');
+
+        return true;
+    }
+
+    public function checkApi()
+    {
+        try {
+            $this->client->api->credentials();
+        } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
+            $this->logger->error('Simla API: ' . $exception->getMessage());
+
+            return false;
+        }
 
         return true;
     }

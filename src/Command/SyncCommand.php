@@ -16,22 +16,16 @@ class SyncCommand extends Command
 
     private $logger;
 
-    private $simlaApi;
-
     private $config;
+
+    private $simlaApi;
 
     private $googleApi;
 
-    private $orderStatus;
-
-    public function __construct(LoggerInterface $logger, Config $config, SimlaApi $simlaApi, GoogleApi $googleApi)
+    public function __construct(LoggerInterface $logger, Config $config)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->simlaApi = $simlaApi;
-        $this->googleApi = $googleApi;
-
-        $this->orderStatus = $this->config->get('simla_order_status_code');
 
         parent::__construct();
     }
@@ -43,82 +37,106 @@ class SyncCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
-        if (!$this->simlaApi->isCustomFieldExist()) {
-            if (!$this->simlaApi->createCustomField()) {
-                return Command::FAILURE;
-            }
-        }
-
-        if (empty($history = $this->simlaApi->getHistory())) {
-            $this->logger->info('History is up to date!');
-            
-            return Command::SUCCESS;
-        }
-
-        foreach ($history as $change) {
-            $historyId = $change->id;
-            $toUpdate = false;
-
-            if ($change->order->status !== $this->orderStatus) {
+        foreach ($this->config->config as $userId => $config) {
+            if ($userId == 'main' || $userId == '') {
                 continue;
             }
 
-            if (($order = $this->simlaApi->getOrder($change)) === false) {
+            $this->logger->info($userId . ': Start to sync');
+
+            $this->simlaApi = new SimlaApi($this->logger, $this->config, $userId);
+            $this->googleApi = new GoogleApi($this->logger, $this->config, $userId);
+
+            $this->orderStatus = $this->config->get($userId, 'simla_order_status_code');
+
+            if (!$this->simlaApi->checkApi()) {
                 continue;
             }
 
-            if (($change->field === 'first_name'
-                || $change->field === 'last_name'
-                || $change->field === 'email'
-                || $change->field === 'customer_comment'
-                || $change->field === 'manager_comment'
-                ) && isset($order->customFields['google_calendar_id'])
-            ) {
-                $toUpdate = true;
+            if (!$this->simlaApi->createCustomFields()) {
+                    continue;
             }
 
-            if ($toUpdate === false && isset($order->customFields['google_calendar_id'])) {
-                continue;
+            if (empty($history = $this->simlaApi->getHistory())) {
+                $this->logger->info($userId . ': History is up to date!');
+
+                return Command::SUCCESS;
             }
 
-            if ($toUpdate === false && !isset($order->customFields['google_calendar_id'])) {
-                $attachments = [];
+            foreach ($history as $change) {
+                $historyId = $change->id;
+                $toUpdate = false;
 
-                if (!empty($files = $this->simlaApi->getFileList($order->id))) {
-                    foreach ($files as $file) {
-                        if (($downloadedFile = $this->simlaApi->downloadFile($file->id)) === false) {
-                            continue;
-                        }
-
-                        if (!is_dir('temp')) {
-                            mkdir('temp');
-                        }
-
-                        file_put_contents('./temp/' . $downloadedFile->fileName, $downloadedFile->data->getContents());
-
-                        $result = $this->googleApi->uploadFile($downloadedFile, $order);
-
-                        $attachments[] = [
-                            'fileUrl' => 'https://drive.google.com/open?id=' . $result->id,
-                            'title' => $result->name,
-                            'mimeType' => $result->mimeType,
-                        ];
-                    }
-                }
-
-                $event = $this->googleApi->createEvent($order, $attachments);
-
-                if ($this->simlaApi->putEventIdToOrder($order, $event->id) === false) {
+                if ($change->order->status !== $this->orderStatus) {
                     continue;
                 }
-            } else {
-                $this->googleApi->updateEvent($order);
+
+                if (($order = $this->simlaApi->getOrder($change)) === false) {
+                    continue;
+                }
+
+                if (($change->field === 'first_name'
+                    || $change->field === 'last_name'
+                    || $change->field === 'email'
+                    || $change->field === 'customer_comment'
+                    || $change->field === 'manager_comment'
+                    || $change->field === 'custom_event_date'
+                    || $change->field === 'custom_event_time_start'
+                    || $change->field === 'custom_event_time_end'
+                    ) && isset($order->customFields['event_id'])
+                ) {
+                    $toUpdate = true;
+                }
+
+                if ($toUpdate === false && isset($order->customFields['event_id'])) {
+                    continue;
+                }
+
+                if ($toUpdate === false && !isset($order->customFields['event_id'])) {
+                    $attachments = [];
+
+                    if (!empty($files = $this->simlaApi->getFileList($order->id))) {
+                        foreach ($files as $file) {
+                            if (($downloadedFile = $this->simlaApi->downloadFile($file->id)) === false) {
+                                continue;
+                            }
+
+                            if (!is_dir('temp')) {
+                                mkdir('temp');
+                            }
+
+                            file_put_contents('./temp/' . $downloadedFile->fileName, $downloadedFile->data->getContents());
+
+                            $result = $this->googleApi->uploadFile($downloadedFile, $order);
+
+                            $attachments[] = [
+                                'fileUrl' => 'https://drive.google.com/open?id=' . $result->id,
+                                'title' => $result->name,
+                                'mimeType' => $result->mimeType,
+                            ];
+                        }
+                    }
+
+                    $event = $this->googleApi->createEvent($order, $attachments);
+
+                    if ($this->simlaApi->putEventDataToOrder($order, $event) === false) {
+                        continue;
+                    }
+                } else {
+                    $this->googleApi->updateEvent($order);
+                }
             }
+
+            $this->config->set($userId, 'simla_history_id', $historyId);
+
+            $date_msk = new \DateTime('now', new \DateTimeZone('Europe/Moscow'));
+            $lastSync = $date_msk->format('Y-m-d H:i:s (e)');
+            $this->config->set($userId, 'last_sync', $lastSync);
+
+            $this->logger->info($userId . ": Done! History index updated to $historyId");
+
+            sleep(1);
         }
-
-        $this->config->set('simla_history_id', $historyId);
-
-        $this->logger->info("Done! History index updated to $historyId");
 
         return Command::SUCCESS;
     }

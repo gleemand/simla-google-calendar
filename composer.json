@@ -6,7 +6,8 @@
         "google/apiclient": "^2.10",
         "retailcrm/api-client-php": "~6.0",
         "monolog/monolog": "^2.3",
-        "php-di/php-di": "^6.3"
+        "php-di/php-di": "^6.3",
+        "slim/twig-view": "^3.2"
     },
     "autoload": {
         "psr-4": {
@@ -19,7 +20,8 @@
     "extra": {
         "google/apiclient-services": [
             "Drive",
-            "Calendar"
+            "Calendar",
+            "Oauth2"
         ]
     }
 }

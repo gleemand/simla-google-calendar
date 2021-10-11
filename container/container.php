@@ -12,10 +12,19 @@ use App\Api\GoogleApi;
 use App\Command\HistoryResetCommand;
 use App\Command\SyncCommand;
 use App\Command\LogoutCommand;
+use Slim\App;
+use Slim\Factory\AppFactory;
+use Slim\Views\Twig;
+use Slim\Interfaces\RouteParserInterface;
 
 $containerBuilder = new ContainerBuilder();
 
 $containerBuilder->addDefinitions([
+    App::class => function (ContainerInterface $c) {
+        AppFactory::setContainer($c);
+
+        return AppFactory::create();
+    },
     LoggerInterface::class => function () {
         $logger = new Logger('Log');
         $handler = new RotatingFileHandler(__DIR__ . '/../log/log.log', 30,  Logger::DEBUG);
@@ -45,16 +54,13 @@ $containerBuilder->addDefinitions([
     HistoryResetCommand::class => function (ContainerInterface $c) {
         return new HistoryResetCommand(
             $c->get(LoggerInterface::class),
-            $c->get(Config::class),
-            $c->get(SimlaApi::class)
+            $c->get(Config::class)
         );
     },
     SyncCommand::class => function (ContainerInterface $c) {
         return new SyncCommand(
             $c->get(LoggerInterface::class),
-            $c->get(Config::class),
-            $c->get(SimlaApi::class),
-            $c->get(GoogleApi::class)
+            $c->get(Config::class)
         );
     },
     LogoutCommand::class => function (ContainerInterface $c) {
@@ -62,6 +68,12 @@ $containerBuilder->addDefinitions([
             $c->get(LoggerInterface::class),
             $c->get(Config::class)
         );
+    },
+    Twig::class => function () {
+        return Twig::create('../views/templates', ['cache' => false]);
+    },
+    RouteParserInterface::class =>  function (ContainerInterface $c) {
+        return $c->get(App::class)->getRouteCollector()->getRouteParser();
     },
 ]);
 

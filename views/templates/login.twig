@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" type="text/css" href="../views/css/styles.css">
+    <meta charset="UTF-8">
+    <title>Simla.com to Calendar integration</title>
+</head>
+<body>
+    <div></div>
+    <div>
+        <a href="https://simla.com"><img src="../views/images/simla.svg"></a>
+    </div>
+    <div>
+        <p>Integration with Google Calendar</p>
+    </div>
+    <div>
+        <hr width=35%>
+    </div>
+    <div>
+        <p>Sign in with Google first</p>
+    </div>
+    <div>
+        <a href="{{ authUrl }}"><img src="../views/images/btn_google_signin_light_normal_web.png" id="button" class="auth_button"></a>
+    </div>
+    <div></div>
+    <div>
+        <hr width=35%>
+    </div>
+    <script>
+        button.onmousedown = function() {
+            document.getElementById("button").src = '../views/images/btn_google_signin_light_pressed_web.png';
+        };
+        button.onmouseover = function() {
+            document.getElementById("button").src = '../views/images/btn_google_signin_light_focus_web.png';
+        };
+        button.onmouseup = function() {
+            document.getElementById("button").src = '../views/images/btn_google_signin_light_focus_web.png';
+        };
+        button.onmouseout = function() {
+            document.getElementById("button").src = '../views/images/btn_google_signin_light_normal_web.png';
+        }
+    </script>
+</body>
+</html>

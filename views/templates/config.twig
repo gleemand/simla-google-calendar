@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<head>
+    <link rel="stylesheet" type="text/css" href="../views/css/styles.css">
+    <meta charset="UTF-8">
+    <title>Simla.com to Calendar integration</title>
+</head>
+<body>
+    <div></div>
+    <div>
+        <a href="https://simla.com"><img src="../views/images/simla.svg"></a>
+    </div>
+    <div>
+        <p>Integration with Google Calendar</p>
+    </div>
+    <div>
+        <hr width=35%>
+    </div>
+    <div>
+        <p>Settings for {{ userId }}</p>
+    </div>
+    {% if success == 'true' %}
+        <div>
+            <p>
+                <b style="color: #27be23">Saved</b><br>
+            </p>
+        </div>
+    {% elseif success == 'false' %}
+        <div>
+            <p>
+                {% for error in errors %}
+                    <b style="color: #d4452f">{{ error }}</b><br>
+                {% endfor %}
+            </p>
+        </div>
+    {% endif %}
+    <form action="save" method="post">
+        <div>
+            <label class="label-common">Simla.com URL</label>
+            <input type="text" name="simla_api_url" class="input-field" value={{ settings['simla_api_url'] }}>
+        </div>
+        <div>
+            <label class="label-common">Simla.com API KEY</label>
+            <input type="text" name="simla_api_key" class="input-field" value={{ settings['simla_api_key'] }}>
+        </div>
+        <div>
+            <label class="label-common">Code of status</label>
+            <input type="text" name="simla_order_status_code" class="input-field" value={{ settings['simla_order_status_code'] }}>
+        </div>
+        <div>
+            <label class="label-common">Calendar ID</label>
+            <input type="text" name="google_calendar_id" class="input-field" value={{ settings['google_calendar_id'] }}>
+        </div>
+        <div>
+            <label class="label-common">Last sync</label>
+            <label class="label-value">
+                {% if settings['last_sync'] %} {{ settings['last_sync'] }} {% else %} none {% endif %}
+            </label>
+            <input type="hidden" name="last_sync" value= {{ settings['last_sync'] }}>
+        </div>
+        <div>
+            <button type="submit" class="submit-button">
+                <span>Save settings</span>
+            </button>
+        </div>
+    </form>
+    <form method="get" action="logout">
+        <div>
+            <button type="submit" class="logout-button">
+                <span class="text-on-green">Logout</span>
+            </button>
+        </div>
+    </form>
+    <div></div>
+    <div>
+        <hr width=35%>
+    </div>
+</body>
+</html>
