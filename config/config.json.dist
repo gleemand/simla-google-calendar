@@ -2,5 +2,5 @@
     "main": {
         "google_redirect_url": "https:\/\/example.com\/auth",
         "google_credentials_file": "config\/credentials.json"
-    },
+    }
 }

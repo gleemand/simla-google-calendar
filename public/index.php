@@ -7,7 +7,7 @@ require __DIR__ . '/../container/container.php';
 
 $app = $container->get(App::class);
 
-$app->setBasePath('/test/simla-google-calendar/public');
+//$app->setBasePath('');
 
 $app->get('/main', \App\Action\MainAction::class);
 $app->get('/auth', \App\Action\AuthAction::class);

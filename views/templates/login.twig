@@ -1,14 +1,14 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <link rel="stylesheet" type="text/css" href="../views/css/styles.css">
+        <link rel="stylesheet" type="text/css" href="css/styles.css">
         <meta charset="UTF-8">
-        <title>Simla calendar</title>
+        <title>Simla Calendar</title>
     </head>
     <body>
         <div></div>
         <div>
-            <a href="https://simla.com"><img src="../views/images/simla.svg"></a>
+            <a href="https://simla.com"><img src="images/simla.svg"></a>
         </div>
         <div>
             <p>Google Calendar integration</p>
@@ -28,7 +28,7 @@
             <p>Connect your Google account first</p>
         </div>
         <div>
-            <a href="{{ authUrl }}"><img src="../views/images/btn_google_signin_dark_normal_web@2x.png" id="button" class="auth_button"></a>
+            <a href="{{ authUrl }}"><img src="images/btn_google_signin_dark_normal_web@2x.png" id="button" class="auth_button"></a>
         </div>
         <div></div>
         <div>
@@ -36,24 +36,24 @@
         </div>
         <div>
             <p>
-                <a href="../views/terms/terms_of_service.html" target="_blank" class="link">Terms of service</a>
+                <a href="terms/terms_of_service.html" target="_blank" class="link">Terms of service</a>
             </p>
             <p>
-                <a href="../views/terms/privacy_policy.html" target="_blank" class="link">Privacy policy</a>
+                <a href="terms/privacy_policy.html" target="_blank" class="link">Privacy policy</a>
             </p>
         </div>
         <script>
             button.onmousedown = function() {
-                document.getElementById("button").src = '../views/images/btn_google_signin_dark_pressed_web@2x.png';
+                document.getElementById("button").src = 'images/btn_google_signin_dark_pressed_web@2x.png';
             };
             button.onmouseover = function() {
-                document.getElementById("button").src = '../views/images/btn_google_signin_dark_focus_web@2x.png';
+                document.getElementById("button").src = 'images/btn_google_signin_dark_focus_web@2x.png';
             };
             button.onmouseup = function() {
-                document.getElementById("button").src = '../views/images/btn_google_signin_dark_focus_web@2x.png';
+                document.getElementById("button").src = 'images/btn_google_signin_dark_focus_web@2x.png';
             };
             button.onmouseout = function() {
-                document.getElementById("button").src = '../views/images/btn_google_signin_dark_normal_web@2x.png';
+                document.getElementById("button").src = 'images/btn_google_signin_dark_normal_web@2x.png';
             }
         </script>
     </body>
