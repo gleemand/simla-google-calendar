@@ -5,7 +5,13 @@
         <meta charset="UTF-8">
         <title>Simla Calendar</title>
     </head>
-    <body>
+    <body
+    {% if success == 'true' %}
+        onload="alert('Saved')"
+    {% elseif success == 'false' %}
+        onload="alert( {{ errors|json_encode(constant('JSON_PRETTY_PRINT')) }} )"
+    {% endif %}
+    >
         <div></div>
         <div>
             <a href="https://simla.com"><img src="images/simla.svg"></a>
@@ -19,21 +25,6 @@
         <div>
             <p>Settings for {{ userId }}</p>
         </div>
-        {% if success == 'true' %}
-            <div>
-                <p>
-                    <b style="color: #27be23">Saved</b><br>
-                </p>
-            </div>
-        {% elseif success == 'false' %}
-            <div>
-                <p>
-                    {% for error in errors %}
-                        <b style="color: #d4452f">{{ error }}</b><br>
-                    {% endfor %}
-                </p>
-            </div>
-        {% endif %}
         <form action="save" method="post">
             <div>
                 <label class="label-common">Simla.com URL</label>
