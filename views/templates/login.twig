@@ -1,43 +1,60 @@
 <!DOCTYPE html>
-<head>
-    <link rel="stylesheet" type="text/css" href="../views/css/styles.css">
-    <meta charset="UTF-8">
-    <title>Simla.com to Calendar integration</title>
-</head>
-<body>
-    <div></div>
-    <div>
-        <a href="https://simla.com"><img src="../views/images/simla.svg"></a>
-    </div>
-    <div>
-        <p>Integration with Google Calendar</p>
-    </div>
-    <div>
-        <hr width=35%>
-    </div>
-    <div>
-        <p>Sign in with Google first</p>
-    </div>
-    <div>
-        <a href="{{ authUrl }}"><img src="../views/images/btn_google_signin_light_normal_web.png" id="button" class="auth_button"></a>
-    </div>
-    <div></div>
-    <div>
-        <hr width=35%>
-    </div>
-    <script>
-        button.onmousedown = function() {
-            document.getElementById("button").src = '../views/images/btn_google_signin_light_pressed_web.png';
-        };
-        button.onmouseover = function() {
-            document.getElementById("button").src = '../views/images/btn_google_signin_light_focus_web.png';
-        };
-        button.onmouseup = function() {
-            document.getElementById("button").src = '../views/images/btn_google_signin_light_focus_web.png';
-        };
-        button.onmouseout = function() {
-            document.getElementById("button").src = '../views/images/btn_google_signin_light_normal_web.png';
-        }
-    </script>
-</body>
+<html>
+    <head>
+        <link rel="stylesheet" type="text/css" href="../views/css/styles.css">
+        <meta charset="UTF-8">
+        <title>Simla calendar</title>
+    </head>
+    <body>
+        <div></div>
+        <div>
+            <a href="https://simla.com"><img src="../views/images/simla.svg"></a>
+        </div>
+        <div>
+            <p>Google Calendar integration</p>
+        </div>
+        <div>
+            <hr width=35%>
+        </div>
+        <div>
+            <p>
+                Integration helps you to create events based on order information from your Simla.com with attached files that app uploads to your Drive from Simla.com
+            </p>
+        </div>
+        <div>
+            <hr width=35%>
+        </div>
+        <div>
+            <p>Connect your Google account first</p>
+        </div>
+        <div>
+            <a href="{{ authUrl }}"><img src="../views/images/btn_google_signin_dark_normal_web@2x.png" id="button" class="auth_button"></a>
+        </div>
+        <div></div>
+        <div>
+            <hr width=35%>
+        </div>
+        <div>
+            <p>
+                <a href="../views/terms/terms_of_service.html" target="_blank" class="link">Terms of service</a>
+            </p>
+            <p>
+                <a href="../views/terms/privacy_policy.html" target="_blank" class="link">Privacy policy</a>
+            </p>
+        </div>
+        <script>
+            button.onmousedown = function() {
+                document.getElementById("button").src = '../views/images/btn_google_signin_dark_pressed_web@2x.png';
+            };
+            button.onmouseover = function() {
+                document.getElementById("button").src = '../views/images/btn_google_signin_dark_focus_web@2x.png';
+            };
+            button.onmouseup = function() {
+                document.getElementById("button").src = '../views/images/btn_google_signin_dark_focus_web@2x.png';
+            };
+            button.onmouseout = function() {
+                document.getElementById("button").src = '../views/images/btn_google_signin_dark_normal_web@2x.png';
+            }
+        </script>
+    </body>
 </html>

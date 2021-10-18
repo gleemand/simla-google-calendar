@@ -9,7 +9,7 @@ use App\Api\GoogleApi;
 use App\Config;
 use Slim\Views\Twig;
 
-class AuthAction
+class DisableAction
 {
     private $logger;
 
@@ -17,41 +17,30 @@ class AuthAction
 
     private $view;
 
-    private $googleApi;
-
-    private $routeParser;
-
     public function __construct(
         LoggerInterface $logger,
         Config $config,
-        Twig $view,
-        GoogleApi $googleApi
+        Twig $view
     )
     {
         $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
-        $this->googleApi = $googleApi;
     }
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
     {
-        $code = $request->getQueryParams()['code'];
+        session_start();
 
-        $this->googleApi->authClient($code);
-
-        $userId = $this->googleApi->userId;
-
-        if ($userId) {
-            session_start();
-            $_SESSION['userId'] = $userId;
-            session_write_close();
-
-            $path = 'config';
-        } else {
-            $path = 'main';
+        if (isset($_SESSION['userId'])) {
+            $this->config->set($_SESSION['userId'], 'google_token', '');
+            unset($_SESSION['userId']);
         }
 
-        return $response->withHeader('Location', $path)->withStatus(301);
+        session_write_close();
+
+        $this->logger->info('Disabled account');
+
+        return $response->withHeader('Location', 'main')->withStatus(301);
     }
 }

@@ -31,6 +31,8 @@ class ConfigAction
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
     {
         $settings = [];
+        $errors = $request->getQueryParams()['errors'];
+        $success = $request->getQueryParams()['success'];
         session_start();
 
         if (isset($_SESSION['userId'])) {
@@ -46,6 +48,8 @@ class ConfigAction
             return $this->view->render($response, 'config.twig', [
                 'settings' => $settings,
                 'userId' => $userId,
+                'errors' => $errors,
+                'success' => $success,
             ]);
         } else {
             session_write_close();

@@ -1,18 +1,6 @@
 {
-    "simla_api_url": "https://example.simla.com",
-    "simla_api_key": "apiKey",
-    "simla_order_status_code": "complete",
-    "simla_history_id": "",
-    "google_credentials_file": "config/credentials.json",
-    "google_token": "",
-    "google_redirect_url": "https://spainscripts.dev.skillum.ru/test/simla-google-calendar/public/auth",
-    "google_calendar_id": "primary",
-    "required": [
-        "simla_api_url",
-        "simla_api_key",
-        "simla_order_status_code",
-        "google_credentials_file",
-        "google_redirect_url",
-        "google_calendar_id"
-    ]
+    "main": {
+        "google_redirect_url": "https:\/\/example.com\/auth",
+        "google_credentials_file": "config\/credentials.json"
+    },
 }

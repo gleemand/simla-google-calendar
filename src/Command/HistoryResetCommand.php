@@ -6,8 +6,8 @@ use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use App\Config;
+use App\HistoryReset;
 use App\Api\SimlaApi;
-use App\Api\GoogleApi;
 use Psr\Log\LoggerInterface;
 
 class HistoryResetCommand extends Command
@@ -40,30 +40,8 @@ class HistoryResetCommand extends Command
                 continue;
             }
 
-            $output->writeln($userId . ': HystoryReset starting...');
-
-            $this->simlaApi = new SimlaApi($this->logger, $this->config, $userId);
-            $this->googleApi = new GoogleApi($this->logger, $this->config, $userId);
-
-            if (!$this->simlaApi->checkApi()) {
-                continue;
-            }
-
-            if (empty($history = $this->simlaApi->getHistory())) {
-                $output->writeln($userId . ': History index is up to date. Nothing to reset.');
-
-                return Command::FAILURE;
-            }
-
-            $historyId = end($history)->id;
-
-            $storedHistoryId = $this->config->get($userId, 'simla_history_id');
-
-            if ($historyId != $storedHistoryId) {
-                $this->config->set($userId, 'simla_history_id', $historyId);
-
-                $output->writeln($userId . ': History index updated to ' . $historyId);
-            }
+            $history = new HistoryReset($userId);
+            $history->reset();
 
             sleep(1);
         }

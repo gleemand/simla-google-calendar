@@ -1,7 +1,5 @@
 <?php
 
-use Slim\Factory\AppFactory;
-use App\Error\ErrorRenderer;
 use Slim\App;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -13,8 +11,9 @@ $app->setBasePath('/test/simla-google-calendar/public');
 
 $app->get('/main', \App\Action\MainAction::class);
 $app->get('/auth', \App\Action\AuthAction::class);
-$app->get('/config', \App\Action\ConfigAction::class);
+$app->get('/config', \App\Action\ConfigAction::class)->setName('config');
 $app->post('/save', \App\Action\SaveAction::class);
 $app->get('/logout', \App\Action\LogoutAction::class);
+$app->get('/disable', \App\Action\DisableAction::class);
 
 $app->run();

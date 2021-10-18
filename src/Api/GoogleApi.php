@@ -50,7 +50,7 @@ class GoogleApi
     {
         $this->client = new Client();
         $this->client->setLogger($this->logger);
-        $this->client->setApplicationName('Simla to Google Calendar');
+        $this->client->setApplicationName('Simla calendar');
         $this->client->addScope(Calendar::CALENDAR_EVENTS);
         $this->client->addScope(Drive::DRIVE_FILE);
         $this->client->addScope(Oauth2::USERINFO_EMAIL);
