@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use App\Api\GoogleApi;
 use App\Config;
 use Slim\Views\Twig;
+use Slim\Interfaces\RouteParserInterface;
 
 class ConfigAction
 {
@@ -17,15 +18,19 @@ class ConfigAction
 
     private $view;
 
+    private $router;
+
     public function __construct(
         LoggerInterface $logger,
         Config $config,
-        Twig $view
+        Twig $view,
+        RouteParserInterface $router
     )
     {
         $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
+        $this->router = $router;
     }
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
@@ -43,6 +48,7 @@ class ConfigAction
             $settings['simla_api_key'] = $this->config->get($userId, 'simla_api_key');
             $settings['simla_order_status_code'] = $this->config->get($userId, 'simla_order_status_code');
             $settings['google_calendar_id'] = $this->config->get($userId, 'google_calendar_id');
+            $settings['create_meet'] = $this->config->get($userId, 'create_meet');
             $settings['last_sync'] = $this->config->get($userId, 'last_sync');
 
             return $this->view->render($response, 'config.twig', [
@@ -54,7 +60,15 @@ class ConfigAction
         } else {
             session_write_close();
 
-            return $response->withHeader('Location', 'main')->withStatus(301);
+            $route = [
+                'name' => 'home',
+                'alert' => 'red',
+                'message' => 'You are not logged in',
+            ];
+
+            $path = $this->router->urlFor($route['name'], [], ['alert' => $route['alert'], 'message' => $route['message']]);
+
+            return $response->withHeader('Location', $path)->withStatus(301);
         }
 
 

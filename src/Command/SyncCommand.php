@@ -37,11 +37,18 @@ class SyncCommand extends Command
 
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
+        $this->logger->info('=========================');
+
         foreach ($this->config->config as $userId => $config) {
             if ($userId == 'main' || $userId == '') {
                 continue;
             }
 
+            if (!$this->config->get($userId, 'simla_api_url')) {
+                continue;
+            }
+
+            $this->logger->info('-------------------------');
             $this->logger->info($userId . ': Start to sync');
 
             $this->simlaApi = new SimlaApi($this->logger, $this->config, $userId);
@@ -57,10 +64,12 @@ class SyncCommand extends Command
                     continue;
             }
 
-            if (empty($history = $this->simlaApi->getHistory())) {
+            $history = $this->simlaApi->getHistory();
+
+            if (empty($history)) {
                 $this->logger->info($userId . ': History is up to date!');
 
-                return Command::SUCCESS;
+                continue;
             }
 
             foreach ($history as $change) {
@@ -75,7 +84,10 @@ class SyncCommand extends Command
                     continue;
                 }
 
-                if (($change->field === 'first_name'
+                usleep(100000);
+
+                if ((
+                    $change->field === 'first_name'
                     || $change->field === 'last_name'
                     || $change->field === 'email'
                     || $change->field === 'customer_comment'
@@ -91,6 +103,8 @@ class SyncCommand extends Command
                 if ($toUpdate === false && isset($order->customFields['event_id'])) {
                     continue;
                 }
+
+                $manager = $this->simlaApi->getManager($order->managerId);
 
                 if ($toUpdate === false && !isset($order->customFields['event_id'])) {
                     $attachments = [];
@@ -117,13 +131,17 @@ class SyncCommand extends Command
                         }
                     }
 
-                    $event = $this->googleApi->createEvent($order, $attachments);
+                    $event = $this->googleApi->createEvent($order, $manager, $attachments);
+
+                    if (!$event) {
+                        continue;
+                    }
 
                     if ($this->simlaApi->putEventDataToOrder($order, $event) === false) {
                         continue;
                     }
                 } else {
-                    $this->googleApi->updateEvent($order);
+                    $this->googleApi->updateEvent($order, $manager);
                 }
             }
 

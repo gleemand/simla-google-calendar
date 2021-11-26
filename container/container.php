@@ -7,6 +7,7 @@ use Psr\Container\ContainerInterface;
 use Psr\Log\LoggerInterface;
 use DI\ContainerBuilder;
 use App\Config;
+use App\HistoryReset;
 use App\Api\SimlaApi;
 use App\Api\GoogleApi;
 use App\Command\HistoryResetCommand;
@@ -54,7 +55,8 @@ $containerBuilder->addDefinitions([
     HistoryResetCommand::class => function (ContainerInterface $c) {
         return new HistoryResetCommand(
             $c->get(LoggerInterface::class),
-            $c->get(Config::class)
+            $c->get(Config::class),
+            $c->get(HistoryReset::class)
         );
     },
     SyncCommand::class => function (ContainerInterface $c) {
@@ -65,6 +67,12 @@ $containerBuilder->addDefinitions([
     },
     LogoutCommand::class => function (ContainerInterface $c) {
         return new LogoutCommand(
+            $c->get(LoggerInterface::class),
+            $c->get(Config::class)
+        );
+    },
+    HistoryReset::class => function (ContainerInterface $c) {
+        return new HistoryReset(
             $c->get(LoggerInterface::class),
             $c->get(Config::class)
         );

@@ -2,16 +2,22 @@
 <html>
     <head>
         <link rel="stylesheet" type="text/css" href="css/styles.css">
+        <link rel="icon" href="images/favicon.ico" type="image/x-icon">
         <meta charset="UTF-8">
         <title>Simla Calendar</title>
     </head>
-    <body
+    <body>
     {% if success == 'true' %}
-        onload="alert('Saved')"
+        <div class="alert">
+            Saved
+            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        </div>
     {% elseif success == 'false' %}
-        onload="alert( {{ errors|json_encode(constant('JSON_PRETTY_PRINT')) }} )"
+        <div class="alert-red">
+            {{ errors|join(", ") }}
+            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        </div>
     {% endif %}
-    >
         <div></div>
         <div>
             <a href="https://simla.com"><img src="images/simla.svg"></a>
@@ -27,15 +33,15 @@
         </div>
         <form action="save" method="post">
             <div>
-                <label class="label-common">Simla.com URL</label>
+                <label class="label-common">Simla URL</label>
                 <input type="text" name="simla_api_url" class="input-field" value={{ settings['simla_api_url'] }}>
             </div>
             <div>
-                <label class="label-common">Simla.com API KEY</label>
+                <label class="label-common">Simla API KEY</label>
                 <input type="text" name="simla_api_key" class="input-field" value={{ settings['simla_api_key'] }}>
             </div>
             <div>
-                <label class="label-common">Code of status</label>
+                <label class="label-common">Status code</label>
                 <input type="text" name="simla_order_status_code" class="input-field" value={{ settings['simla_order_status_code'] }}>
             </div>
             <div>
@@ -43,11 +49,20 @@
                 <input type="text" name="google_calendar_id" class="input-field" value={{ settings['google_calendar_id'] }}>
             </div>
             <div>
+                <label class="label-common">Google Meet</label>
+                <label class="label-value">
+                <label class="switch">
+                    <input type="checkbox" name="create_meet" value="true" {% if settings['create_meet'] == 'true' %} checked {% endif %}>
+                    <span class="slider round"></span>
+                </label></label>
+            </div>
+            <div>
                 <label class="label-common">Last sync</label>
                 <label class="label-value">
                     {% if settings['last_sync'] %} {{ settings['last_sync'] }} {% else %} none {% endif %}
                 </label>
             </div>
+            <input type="hidden" name="time_zone" id="time_zone">
             <div>
                 <button type="submit" class="submit-button">
                     <span class="text-on-green">Save settings</span>
@@ -61,10 +76,10 @@
                 </button>
             </div>
         </form>
-        <form method="get" action="disable">
+        <form method="get" action="delete">
             <div>
                 <button type="submit" class="logout-button">
-                    <span class="text-on-white">Disable</span>
+                    <span class="text-on-white">Delete</span>
                 </button>
             </div>
         </form>
@@ -80,5 +95,8 @@
                 <a href="terms/privacy_policy.html" target="_blank" class="link">Privacy policy</a>
             </p>
         </div>
+        <script type="text/javascript">
+            document.getElementById('time_zone').value = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        </script>
     </body>
 </html>

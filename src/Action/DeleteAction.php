@@ -8,8 +8,9 @@ use Psr\Log\LoggerInterface;
 use App\Api\GoogleApi;
 use App\Config;
 use Slim\Views\Twig;
+use Slim\Interfaces\RouteParserInterface;
 
-class DisableAction
+class DeleteAction
 {
     private $logger;
 
@@ -17,15 +18,19 @@ class DisableAction
 
     private $view;
 
+    private $router;
+
     public function __construct(
         LoggerInterface $logger,
         Config $config,
-        Twig $view
+        Twig $view,
+        RouteParserInterface $router
     )
     {
         $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
+        $this->router = $router;
     }
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
@@ -33,14 +38,22 @@ class DisableAction
         session_start();
 
         if (isset($_SESSION['userId'])) {
-            $this->config->set($_SESSION['userId'], 'google_token', '');
+            $this->config->delete($_SESSION['userId']);
             unset($_SESSION['userId']);
         }
 
         session_write_close();
 
-        $this->logger->info('Disabled account');
+        $this->logger->info('Deleted account');
 
-        return $response->withHeader('Location', 'main')->withStatus(301);
+        $route = [
+            'name' => 'home',
+            'alert' => 'green',
+            'message' => 'Account deleted',
+        ];
+
+        $path = $this->router->urlFor($route['name'], [], ['alert' => $route['alert'], 'message' => $route['message']]);
+
+        return $response->withHeader('Location', $path)->withStatus(301);
     }
 }

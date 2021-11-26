@@ -21,17 +21,21 @@ class SaveAction
 
     private $router;
 
+    private $history;
+
     public function __construct(
         LoggerInterface $logger,
         Config $config,
         Twig $view,
-        RouteParserInterface $router
+        RouteParserInterface $router,
+        HistoryReset $history
     )
     {
         $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
         $this->router = $router;
+        $this->history = $history;
     }
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
@@ -47,7 +51,7 @@ class SaveAction
         if ($userId && count($settings)) {
             if (
                 htmlspecialchars($settings['simla_api_url'])
-                && preg_match("/https:\/\/(.*).(retailcrm.(pro|ru|es)|simla.com)/",
+                && preg_match("/https:\/\/(.*).(retailcrm.(pro|ru|es)|simla.com|ecomlogic.com)/",
                 htmlspecialchars($settings['simla_api_url']))
             ) {
                 $this->config->set($userId, 'simla_api_url', htmlspecialchars($settings['simla_api_url']));
@@ -73,15 +77,12 @@ class SaveAction
                 $errors[] = 'Status code is not correct';
             }
 
-            if (htmlspecialchars($settings['simla_order_status_code'])) {
-                $this->config->set($userId, 'google_calendar_id', htmlspecialchars($settings['google_calendar_id']));
-            } else {
-                $errors[] = 'Calendar ID is not correct';
-            }
+            $this->config->set($userId, 'google_calendar_id', htmlspecialchars($settings['google_calendar_id']));
+            $this->config->set($userId, 'time_zone', htmlspecialchars($settings['time_zone']));
+            $this->config->set($userId, 'create_meet', htmlspecialchars($settings['create_meet']));
 
             if (count($errors) == 0) {
-                $history = new HistoryReset($this->logger, $this->config, $userId);
-                $history->reset();
+                $this->history->reset($userId);
 
                 $success = 'true';
             }

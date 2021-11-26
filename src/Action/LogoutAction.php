@@ -8,6 +8,7 @@ use Psr\Log\LoggerInterface;
 use App\Api\GoogleApi;
 use App\Config;
 use Slim\Views\Twig;
+use Slim\Interfaces\RouteParserInterface;
 
 class LogoutAction
 {
@@ -17,15 +18,19 @@ class LogoutAction
 
     private $view;
 
+    private $router;
+
     public function __construct(
         LoggerInterface $logger,
         Config $config,
-        Twig $view
+        Twig $view,
+        RouteParserInterface $router
     )
     {
         $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
+        $this->router = $router;
     }
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
@@ -40,6 +45,14 @@ class LogoutAction
 
         $this->logger->info('Logged out');
 
-        return $response->withHeader('Location', 'main')->withStatus(301);
+        $route = [
+            'name' => 'home',
+            'alert' => 'green',
+            'message' => 'Logged out',
+        ];
+
+        $path = $this->router->urlFor($route['name'], [], ['alert' => $route['alert'], 'message' => $route['message']]);
+
+        return $response->withHeader('Location', $path)->withStatus(301);
     }
 }

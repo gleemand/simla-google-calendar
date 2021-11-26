@@ -2,10 +2,22 @@
 <html>
     <head>
         <link rel="stylesheet" type="text/css" href="css/styles.css">
+        <link rel="icon" href="images/favicon.ico" type="image/x-icon">
         <meta charset="UTF-8">
         <title>Simla Calendar</title>
     </head>
     <body>
+    {% if alert == 'green' %}
+        <div class="alert">
+            {{ message }}
+            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        </div>
+    {% elseif alert == 'red' %}
+        <div class="alert-red">
+            {{ message }}
+            <span class="closebtn" onclick="this.parentElement.style.display='none';">&times;</span>
+        </div>
+    {% endif %}
         <div></div>
         <div>
             <a href="https://simla.com"><img src="images/simla.svg"></a>

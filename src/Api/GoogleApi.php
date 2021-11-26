@@ -7,8 +7,12 @@ use Google\Service\Calendar;
 use Google\Service\Oauth2;
 use Google\Service\Calendar\Event;
 use Google\Service\Calendar\EventDateTime;
+use Google\Service\Calendar\ConferenceData;
+use Google\Service\Calendar\CreateConferenceRequest;
+use Google\Service\Calendar\ConferenceSolutionKey;
 use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
+use Google\Service\Exception;
 use App\Config;
 use Psr\Log\LoggerInterface;
 
@@ -30,18 +34,26 @@ class GoogleApi
 
     private $simlaUrl;
 
+    private $createMeet;
+
+    private $timeZone;
+
     private $code;
 
     public function __construct(LoggerInterface $logger, Config $config, $userId = null)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->credentials = $this->config->get('main', 'google_credentials_file');
-        $this->token = $this->config->get($userId, 'google_token');
-        $this->redirectUrl = $this->config->get('main', 'google_redirect_url');
-        $this->calendarId = $this->config->get($userId, 'google_calendar_id');
+        $this->userId = $userId;
 
-        $this->simlaUrl = $this->config->get($userId, 'simla_api_url');
+        $this->credentials = $this->config->get('main', 'google_credentials_file');
+        $this->token = $this->config->get($this->userId, 'google_token');
+        $this->redirectUrl = $this->config->get('main', 'google_redirect_url');
+        $this->calendarId = $this->config->get($this->userId, 'google_calendar_id');
+        $this->createMeet = $this->config->get($this->userId, 'create_meet');
+        $this->timeZone = $this->config->get($this->userId, 'time_zone');
+
+        $this->simlaUrl = $this->config->get($this->userId, 'simla_api_url');
 
         $this->newClient();
     }
@@ -71,35 +83,69 @@ class GoogleApi
         $serviceDrive = new Drive($this->client);
         $serviceFile = new DriveFile;
         $serviceFile->setName($fileToUpload->fileName);
-        $serviceFile->setDescription('Attachment of order #' . $order->id);
-        $result = $serviceDrive->files->create(
-            $serviceFile,
-                array(
-                    'data' => file_get_contents('./temp/' . $fileToUpload->fileName),
-                    'mimeType' => 'application/octet-stream',
-                    'uploadType' => 'multipart'
-                )
-        );
+        $serviceFile->setDescription('Attachment of order #' . $order->number);
+
+        try {
+            $result = $serviceDrive->files->create(
+                $serviceFile,
+                    array(
+                        'data' => file_get_contents('./temp/' . $fileToUpload->fileName),
+                        'mimeType' => 'application/octet-stream',
+                        'uploadType' => 'multipart'
+                    )
+            );
+        } catch (Exception $exception) {
+            $this->logger->error('Uploading file for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
+
+            return false;
+        }
 
         unlink ('./temp/' . $fileToUpload->fileName);
 
         return $result;
     }
 
-    public function createEvent($order, $attachments)
+    public function createEvent($order, $manager, $attachments)
     {
         $serviceCalendar = new Calendar($this->client);
 
         $date = $this->prepareDate($order, false);
 
+        if ($this->createMeet) {
+            $attendees = [];
+
+            isset($order->email) ? $attendees[] = [
+                'displayName' => $order->firstName . ' ' . $order->lastName,
+                'email' => $order->email,
+            ] : null;
+
+            isset($manager->email) ? $attendees[] = [
+                'displayName' => $manager->firstName . ' - Manager',
+                'email' => $manager->email,
+            ] : null;
+
+            isset($this->userId) ? $attendees[] = [
+                'displayName' => 'Organizer',
+                'email' => $this->userId,
+            ] : null;
+
+            $order->customerComment = '';
+            $order->managerComment = '';
+        } else {
+            $attendees = [];
+        }
+
+        echo "<pre>", print_r($attendees, true), "</pre>";
+
         $event = new Event(array(
-            'summary' => 'Order #' . $order->id,
+            'summary' => 'Order #' . $order->number,
             'description' =>    '<ul>' .
-                                    '<li><b>Order #</b>' . $order->id . '</li>' .
+                                    '<li><b>Order #</b>' . $order->number . '</li>' .
                                     '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
                                     '<li><b>Email: </b>' . $order->email . '</li>' .
                                     '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
-                                    '<li><b>Description: </b>' . $order->customerComment . " " . $order->managerComment . '</li>' .
+                                    '<li><b>Customer comment: </b>' . $order->customerComment .
+                                    '<li><b>Manager comment: </b>' . $order->managerComment .
                                 '</ul>',
             'start' => array(
                 'dateTime' => $date['start'],
@@ -108,20 +154,42 @@ class GoogleApi
                 'dateTime' => $date['end'],
             ),
             'source' => array(
-                'title' => 'Manage on Simla.com',
+                'title' => 'Manage order',
                 'url' => rtrim($this->simlaUrl, '/\\') . '/orders/' . $order->id . '/edit',
             ),
             'attachments' => $attachments,
+            'attendees' => $attendees,
         ));
 
-        $event = $serviceCalendar->events->insert($this->calendarId, $event, ['supportsAttachments' => true]);
+        if ($this->createMeet) {
+            $solution_key = new ConferenceSolutionKey();
+            $solution_key->setType("hangoutsMeet");
+            $conferenceRequest = new CreateConferenceRequest();
+            $conferenceRequest->setRequestId(random_int(10000000, 99999999));
+            $conferenceRequest->setConferenceSolutionKey($solution_key);
+            $conference = new ConferenceData();
+            $conference->setCreateRequest($conferenceRequest);
+            $event->setConferenceData($conference);
+        }
 
-        $this->logger->info("Event for order #$order->id created");
+        try {
+            $event = $serviceCalendar->events->insert($this->calendarId, $event, [
+                'supportsAttachments' => true,
+                'conferenceDataVersion' => 1,
+                'sendUpdates' => 'all',
+            ]);
+        } catch (Exception $exception) {
+            $this->logger->error('Creating event for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
+
+            return false;
+        }
+
+        $this->logger->info("Event for order #$order->number created");
 
         return $event;
     }
 
-    public function updateEvent($order)
+    public function updateEvent($order, $manager)
     {
         $serviceCalendar = new Calendar($this->client);
 
@@ -134,28 +202,52 @@ class GoogleApi
         $endDate->setDateTime($date['end']);
 
         $eventId = $order->customFields['event_id'];
-        $event = $serviceCalendar->events->get($this->calendarId, $eventId);
+
+        try {
+            $event = $serviceCalendar->events->get($this->calendarId, $eventId);
+        } catch (Exception $exception) {
+            $this->logger->error('Getting event for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
+
+            return false;
+        }
 
         if ($event->status == 'cancelled') {
-            $this->logger->error("Event for order #$order->id is cancelled");
+            $this->logger->error("Event for order #$order->number is cancelled");
             return false;
+        }
+
+        if ($this->createMeet) {
+            $order->customerComment = '';
+            $order->managerComment = '';
         }
 
         $event->setDescription(
             '<ul>' .
-            '<li><b>Order #</b>' . $order->id . '</li>' .
-            '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
-            '<li><b>Email: </b>' . $order->email . '</li>' .
-            '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
-            '<li><b>Description: </b>' . $order->customerComment . " " . $order->managerComment . '</li>' .
-            '</ul>'
+                '<li><b>Order #</b>' . $order->number . '</li>' .
+                '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
+                '<li><b>Email: </b>' . $order->email . '</li>' .
+                '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
+                '<li><b>Customer comment: </b>' . $order->customerComment .
+                '<li><b>Manager comment: </b>' . $order->managerComment .
+            '</ul>',
         );
 
         $event->setStart($startDate);
         $event->setEnd($endDate);
-        $serviceCalendar->events->update($this->calendarId, $event->getId(), $event);
 
-        $this->logger->info("Event for order #$order->id updated");
+        try {
+            $serviceCalendar->events->update($this->calendarId, $event->getId(), $event, [
+                'supportsAttachments' => true,
+                'conferenceDataVersion' => 1,
+                'sendUpdates' => 'all',
+            ]);
+        } catch (Exception $exception) {
+            $this->logger->error('Updating event for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
+
+            return false;
+        }
+
+        $this->logger->info("Event for order #$order->number updated");
 
         return true;
     }
@@ -164,6 +256,11 @@ class GoogleApi
     {
         if (!empty($accessToken = json_decode($this->token, true))) {
             $this->client->setAccessToken($accessToken);
+            $userId = $this->getUserFromToken();
+
+            if ($userId) {
+                $this->userId = $userId;
+            }
         }
 
         if ($this->client->isAccessTokenExpired()) {
@@ -175,7 +272,7 @@ class GoogleApi
                 $this->logger->info('Google token is updated');
             } else {
                 if ($code == null) {
-                    $this->logger->error('Code from google is absente');
+                    $this->logger->error('Auth code is absent');
 
                     return $this->client;
                 }
@@ -184,15 +281,24 @@ class GoogleApi
                 $this->client->setAccessToken($accessToken);
 
                 if (array_key_exists('error', $accessToken)) {
-                    throw new \Exception(join(', ', $accessToken));
+                    throw new Exception(join(', ', $accessToken));
 
                     $this->config->set($this->userId, 'google_token', '');
-                    $this->logger->info('Logged out');
+                    $this->logger->error('Error -> logged out');
                 } else {
                     $token = $this->client->getAccessToken();
-                    $this->userId = $this->getUserFromToken();
-                    $this->config->set($this->userId, 'google_token', json_encode($token));
-                    $this->logger->info('Google token is stored');
+                    $userId = $this->getUserFromToken();
+
+                    if ($userId) {
+                        $this->userId = $userId;
+                    }
+
+                    if ($this->userId) {
+                        $this->config->set($this->userId, 'google_token', json_encode($token));
+                        $this->logger->info('Google token is stored');
+                    } else {
+                        $this->logger->error('Can not receive your e-mail from google api!');
+                    }
                 }
             }
         }
@@ -228,13 +334,13 @@ class GoogleApi
         ) {
             $date['start'] = date_format(date_create(
                 $order->customFields['event_date'] .
-                $order->customFields['event_time_start'] .
-                '+03'),
+                $order->customFields['event_time_start'],
+                timezone_open($this->timeZone)),
             DATE_RFC3339);
             $date['end'] = date_format(date_create(
                 $order->customFields['event_date'] .
-                $order->customFields['event_time_end'] .
-                '+03'),
+                $order->customFields['event_time_end'],
+                timezone_open($this->timeZone)),
             DATE_RFC3339);
         } else {
             $date['start'] = date_format($order->createdAt, DATE_RFC3339);

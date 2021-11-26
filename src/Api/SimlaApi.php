@@ -15,14 +15,13 @@ use RetailCrm\Api\Model\Request\Orders\OrdersEditRequest;
 use RetailCrm\Api\Model\Filter\Files\FileFilter;
 use RetailCrm\Api\Model\Request\Files\FilesRequest;
 use RetailCrm\Api\Enum\CustomFields\CustomFieldEntity;
+use RetailCrm\Api\Model\Entity\Integration\IntegrationModule;
+use RetailCrm\Api\Model\Request\Integration\IntegrationModulesEditRequest;
 use App\Config;
 use Psr\Log\LoggerInterface;
-
-use RetailCrm\Api\Enum\CustomFields\CustomFieldDisplayArea;
-use RetailCrm\Api\Enum\CustomFields\CustomFieldType;
-use RetailCrm\Api\Enum\CustomFields\CustomFieldViewMode;
 use RetailCrm\Api\Model\Entity\CustomFields\CustomField;
 use RetailCrm\Api\Model\Request\CustomFields\CustomFieldsCreateRequest;
+
 
 
 class SimlaApi
@@ -39,6 +38,8 @@ class SimlaApi
 
     private $client;
 
+    private $userId;
+
     private static $customFields = [
         [
             'code' => 'event_id',
@@ -46,6 +47,7 @@ class SimlaApi
             'viewMode' => 'not_editable',
             'type' => 'string',
             'displayArea' => 'customer',
+            'ordering' => 9904,
 
         ],
         [
@@ -54,6 +56,7 @@ class SimlaApi
             'viewMode' => 'not_editable',
             'type' => 'string',
             'displayArea' => 'customer',
+            'ordering' => 9903,
 
         ],
         [
@@ -62,20 +65,23 @@ class SimlaApi
             'viewMode' => 'editable',
             'type' => 'date',
             'displayArea' => 'customer',
+            'ordering' => 9900,
         ],
         [
             'code' => 'event_time_start',
-            'name' => 'Event start time (MSK, 00:00)',
+            'name' => 'Event start time (00:00)',
             'viewMode' => 'editable',
             'type' => 'string',
             'displayArea' => 'customer',
+            'ordering' => 9901,
         ],
         [
             'code' => 'event_time_end',
-            'name' => 'Event end time (MSK, 00:00)',
+            'name' => 'Event end time (00:00)',
             'viewMode' => 'editable',
             'type' => 'string',
             'displayArea' => 'customer',
+            'ordering' => 9902,
         ],
     ];
 
@@ -86,6 +92,7 @@ class SimlaApi
         $this->apiUrl = $this->config->get($userId, 'simla_api_url');
         $this->apiKey = $this->config->get($userId, 'simla_api_key');
         $this->historyId = $this->config->get($userId, 'simla_history_id');
+        $this->userId = $userId;
 
         $this->client = SimpleClientFactory::createClient($this->apiUrl, $this->apiKey);
     }
@@ -218,6 +225,19 @@ class SimlaApi
         return true;
     }
 
+    public function getManager($id)
+    {
+        try {
+            $apiResponse = $this->client->users->get($id);
+        } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
+            $this->logger->error('Getting manager e-mail: ' . $exception->getMessage());
+
+            return false;
+        }
+
+        return $apiResponse->user;
+    }
+
     private function createCustomField($customField)
     {
         $field                 = new CustomField();
@@ -238,7 +258,7 @@ class SimlaApi
             return false;
         }
 
-        $this->logger->error('Custom field \'' . $customField['code'] . '\' created in CRM');
+        $this->logger->info('Custom field \'' . $customField['code'] . '\' created in CRM');
 
         return true;
     }
@@ -252,6 +272,32 @@ class SimlaApi
 
             return false;
         }
+
+        return true;
+    }
+
+    public function connectModule()
+    {
+        $module = new IntegrationModule();
+
+        $module->clientId = $this->userId;
+        $module->code = 'google-calendar';
+        $module->integrationCode = 'google-calendar';
+        $module->name = 'Google Calendar';
+        $module->logo = 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg';
+        $module->baseUrl = 'https://simla-calendar.dev.skillum.ru/';
+        $module->actions = ['activity' => '/activity'];
+        $module->accountUrl = 'https://simla-calendar.dev.skillum.ru/config';
+
+        try {
+            $apiResponse = $client->integration->edit('mg-fbmessenger', new IntegrationModulesEditRequest($module));
+        } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
+            $this->logger->error('Connect module: ' . $exception->getMessage());
+
+            return false;
+        }
+
+        $this->logger->info('Connect module: ' . json_encode($apiResponse->info));
 
         return true;
     }

@@ -49,6 +49,12 @@ class Config
         return file_put_contents($this->configFile, json_encode($this->config, JSON_PRETTY_PRINT));
     }
 
+    public function delete($userId) {
+        unset($this->config[$userId]);
+
+        return file_put_contents($this->configFile, json_encode($this->config, JSON_PRETTY_PRINT));
+    }
+
     //unused
     public function checkParams($userId) {
         foreach ($this->config as $key => $param) {

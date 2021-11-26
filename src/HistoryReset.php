@@ -16,17 +16,21 @@ class HistoryReset
 
     private $userId;
 
-    public function __construct(LoggerInterface $logger, Config $config, $userId = null)
+    public function __construct(LoggerInterface $logger, Config $config)
     {
         $this->logger = $logger;
         $this->config = $config;
-        $this->userId = $userId;
     }
 
-    public function reset()
+    public function reset($userId)
     {
-        if ($this->userId == '') {
+        $this->userId = $userId;
 
+        if ($this->userId == '') {
+            return false;
+        }
+
+        if (!$this->config->get($userId, 'simla_api_url')) {
             return false;
         }
 
@@ -35,7 +39,6 @@ class HistoryReset
         $this->simlaApi = new SimlaApi($this->logger, $this->config, $this->userId);
 
         if (!$this->simlaApi->checkApi()) {
-
             return false;
         }
 

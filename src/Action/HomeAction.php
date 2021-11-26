@@ -9,7 +9,7 @@ use App\Api\GoogleApi;
 use App\Config;
 use Slim\Views\Twig;
 
-class MainAction
+class HomeAction
 {
     private $view;
 
@@ -28,6 +28,12 @@ class MainAction
 
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
     {
+        if (isset($request->getQueryParams()['alert']) && isset($request->getQueryParams()['message'])) {
+            $route['alert'] = $request->getQueryParams()['alert'];
+            $route['message'] = $request->getQueryParams()['message'];
+        }
+
+
         session_start();
 
         if (isset($_SESSION['userId']) && $_SESSION['userId']) {
@@ -38,7 +44,11 @@ class MainAction
 
             $authUrl = $this->googleApi->generateAuthUrl();
 
-            return $this->view->render($response, 'login.twig', ['authUrl' => $authUrl]);
+            return $this->view->render($response, 'login.twig', [
+                'authUrl' => $authUrl,
+                'alert' => $route['alert'],
+                'message' => $route['message'],
+            ]);
         }
     }
 }

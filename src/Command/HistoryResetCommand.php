@@ -20,10 +20,13 @@ class HistoryResetCommand extends Command
 
     private $config;
 
-    public function __construct(LoggerInterface $logger, Config $config)
+    private $history;
+
+    public function __construct(LoggerInterface $logger, Config $config, HistoryReset $history)
     {
         $this->logger = $logger;
         $this->config = $config;
+        $this->history = $history;
 
         parent::__construct();
     }
@@ -40,8 +43,7 @@ class HistoryResetCommand extends Command
                 continue;
             }
 
-            $history = new HistoryReset($userId);
-            $history->reset();
+            $this->history->reset($userId);
 
             sleep(1);
         }
