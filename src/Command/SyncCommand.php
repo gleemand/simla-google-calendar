@@ -40,13 +40,19 @@ class SyncCommand extends Command
         $this->logger->info('=========================');
 
         foreach ($this->config->config as $userId => $config) {
-            if ($userId == 'main' || $userId == '') {
+            if ($userId == 'main') {
                 continue;
             }
 
             if (!$this->config->get($userId, 'simla_api_url')) {
                 continue;
             }
+
+            if (!$this->config->get($userId, 'active')) {
+                continue;
+            }
+
+            usleep(100000);
 
             $this->logger->info('-------------------------');
             $this->logger->info($userId . ': Start to sync');
@@ -58,10 +64,6 @@ class SyncCommand extends Command
 
             if (!$this->simlaApi->checkApi()) {
                 continue;
-            }
-
-            if (!$this->simlaApi->createCustomFields()) {
-                    continue;
             }
 
             $history = $this->simlaApi->getHistory();
@@ -152,9 +154,9 @@ class SyncCommand extends Command
             $this->config->set($userId, 'last_sync', $lastSync);
 
             $this->logger->info($userId . ": Done! History index updated to $historyId");
-
-            sleep(1);
         }
+
+        $this->logger->info('Done');
 
         return Command::SUCCESS;
     }

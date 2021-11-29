@@ -38,12 +38,12 @@ class LogoutAction
         session_start();
 
         if (isset($_SESSION['userId'])) {
+            $this->logger->info($_SESSION['userId'] . ': Logged out');
+
             unset($_SESSION['userId']);
         }
 
         session_write_close();
-
-        $this->logger->info('Logged out');
 
         $route = [
             'name' => 'home',

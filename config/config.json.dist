@@ -1,6 +1,8 @@
 {
     "main": {
-        "google_redirect_url": "https:\/\/example.com\/auth",
+        "base_url": "https:\/\/example.com\/",
+        "account_rel_url": "config",
+        "google_redirect_url": "auth",
         "google_credentials_file": "config\/credentials.json"
     }
 }

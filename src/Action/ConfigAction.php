@@ -40,7 +40,13 @@ class ConfigAction
         $success = $request->getQueryParams()['success'];
         session_start();
 
-        if (isset($_SESSION['userId'])) {
+        $post = (array)$request->getParsedBody();
+
+        if (isset($post['clientId'])) {
+            $_SESSION['userId'] = $post['clientId'];
+        }
+
+        if (isset($_SESSION['userId']) && $_SESSION['userId'] !== md5(0) && $_SESSION['userId'] !== md5('')) {
             $userId = $_SESSION['userId'];
             session_write_close();
 
@@ -54,6 +60,7 @@ class ConfigAction
             return $this->view->render($response, 'config.twig', [
                 'settings' => $settings,
                 'userId' => $userId,
+                'email' => $this->config->get($userId, 'email'),
                 'errors' => $errors,
                 'success' => $success,
             ]);

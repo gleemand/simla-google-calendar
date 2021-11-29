@@ -37,10 +37,14 @@ class Config
             return $this->config[$userId][$name];
         }
 
-        return null;
+        return false;
     }
 
     public function set($userId, $name, $value) {
+        if ($userId === md5(0) && $userId === md5('')) {
+            return false;
+        }
+
         if (!array_key_exists($userId, $this->config)) {
             $this->config[$userId] = [];
         }
@@ -53,14 +57,5 @@ class Config
         unset($this->config[$userId]);
 
         return file_put_contents($this->configFile, json_encode($this->config, JSON_PRETTY_PRINT));
-    }
-
-    //unused
-    public function checkParams($userId) {
-        foreach ($this->config as $key => $param) {
-            if (empty($param) && in_array($key, $this->config->required)) {
-                $this->logger->error($key . ' parameter in config.json is required');
-            }
-        }
     }
 }

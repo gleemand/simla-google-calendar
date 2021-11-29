@@ -26,10 +26,6 @@ class HistoryReset
     {
         $this->userId = $userId;
 
-        if ($this->userId == '') {
-            return false;
-        }
-
         if (!$this->config->get($userId, 'simla_api_url')) {
             return false;
         }
@@ -42,7 +38,9 @@ class HistoryReset
             return false;
         }
 
-        if (empty($history = $this->simlaApi->getHistory())) {
+        $history = $this->simlaApi->getHistory();
+
+        if (empty($history)) {
             $this->logger->info($this->userId . ': History index is up to date. Nothing to reset.');
 
             return true;

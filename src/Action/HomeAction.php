@@ -33,10 +33,9 @@ class HomeAction
             $route['message'] = $request->getQueryParams()['message'];
         }
 
-
         session_start();
 
-        if (isset($_SESSION['userId']) && $_SESSION['userId']) {
+        if (isset($_SESSION['userId']) && $_SESSION['userId'] !== md5(0) && $_SESSION['userId'] !== md5('')) {
 
             return $response->withHeader('Location', 'config')->withStatus(301);
         } else {

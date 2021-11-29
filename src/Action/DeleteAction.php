@@ -39,12 +39,12 @@ class DeleteAction
 
         if (isset($_SESSION['userId'])) {
             $this->config->delete($_SESSION['userId']);
+            $this->logger->info($_SESSION['userId'] . ': Account deleted');
+
             unset($_SESSION['userId']);
         }
 
         session_write_close();
-
-        $this->logger->info('Deleted account');
 
         $route = [
             'name' => 'home',

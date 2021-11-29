@@ -7,7 +7,6 @@ use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use App\Config;
 use App\HistoryReset;
-use App\Api\SimlaApi;
 use Psr\Log\LoggerInterface;
 
 class HistoryResetCommand extends Command
@@ -15,8 +14,6 @@ class HistoryResetCommand extends Command
     protected static $defaultName = 'app:reset';
 
     private $logger;
-
-    private $simlaApi;
 
     private $config;
 
@@ -39,13 +36,21 @@ class HistoryResetCommand extends Command
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         foreach ($this->config->config as $userId => $config) {
-            if ($userId == 'main' || $userId == '') {
+            if ($userId == 'main') {
+                continue;
+            }
+
+            if (!$this->config->get($userId, 'simla_api_url')) {
+                continue;
+            }
+
+            if (!$this->config->get($userId, 'active')) {
                 continue;
             }
 
             $this->history->reset($userId);
 
-            sleep(1);
+            usleep(200000);
         }
 
         return Command::SUCCESS;

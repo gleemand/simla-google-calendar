@@ -285,19 +285,20 @@ class SimlaApi
         $module->integrationCode = 'google-calendar';
         $module->name = 'Google Calendar';
         $module->logo = 'https://upload.wikimedia.org/wikipedia/commons/a/a5/Google_Calendar_icon_%282020%29.svg';
-        $module->baseUrl = 'https://simla-calendar.dev.skillum.ru/';
+        $module->baseUrl = $this->config->get('main', 'base_url');
+        $module->active = true;
         $module->actions = ['activity' => '/activity'];
-        $module->accountUrl = 'https://simla-calendar.dev.skillum.ru/config';
+        $module->accountUrl = $this->config->get('main', 'base_url') . $this->config->get('main', 'account_rel_url');
 
         try {
-            $apiResponse = $client->integration->edit('mg-fbmessenger', new IntegrationModulesEditRequest($module));
+            $apiResponse = $this->client->integration->edit('google-calendar', new IntegrationModulesEditRequest($module));
         } catch (ApiExceptionInterface | ClientExceptionInterface $exception) {
             $this->logger->error('Connect module: ' . $exception->getMessage());
 
             return false;
         }
 
-        $this->logger->info('Connect module: ' . json_encode($apiResponse->info));
+        $this->logger->info($this->userId . ': Module connected');
 
         return true;
     }

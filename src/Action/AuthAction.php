@@ -45,7 +45,7 @@ class AuthAction
 
         $userId = $this->googleApi->userId;
 
-        if ($userId) {
+        if ($userId !== md5(0) && $userId !== md5('')) {
             session_start();
             $_SESSION['userId'] = $userId;
             session_write_close();

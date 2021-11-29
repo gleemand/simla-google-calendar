@@ -5,7 +5,7 @@ namespace App\Action;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use App\Api\GoogleApi;
+use App\Api\SimlaApi;
 use App\Config;
 use App\HistoryReset;
 use Slim\Views\Twig;
@@ -16,8 +16,6 @@ class SaveAction
     private $logger;
 
     private $config;
-
-    private $view;
 
     private $router;
 
@@ -48,7 +46,7 @@ class SaveAction
         $userId = $_SESSION['userId'];
         session_write_close();
 
-        if ($userId && count($settings)) {
+        if (isset($_SESSION['userId']) && $_SESSION['userId'] !== md5(0) && $_SESSION['userId'] !== md5('')) {
             if (
                 htmlspecialchars($settings['simla_api_url'])
                 && preg_match("/https:\/\/(.*).(retailcrm.(pro|ru|es)|simla.com|ecomlogic.com)/",
@@ -82,13 +80,30 @@ class SaveAction
             $this->config->set($userId, 'create_meet', htmlspecialchars($settings['create_meet']));
 
             if (count($errors) == 0) {
-                $this->history->reset($userId);
 
-                $success = 'true';
+                if (!$this->config->get($userId, 'simla_connected')) {
+                    $simlaApi = new SimlaApi($this->logger, $this->config, $userId);
+
+                    if ($simlaApi->connectModule()) {
+                        $simlaApi->createCustomFields();
+                        $this->history->reset($userId);
+
+                        $this->config->set($userId, 'simla_connected', 1);
+                        $this->config->set($userId, 'active', 1);
+
+                        $success = 'true';
+                    } else {
+                        $errors[] = 'Error while connecting to CRM';
+                    }
+                }
             }
         }
 
-        $path = $this->router->urlFor('config', [], ['success' => $success, 'errors' => $errors ]);
+        if ($success) {
+            $path = htmlspecialchars($settings['simla_api_url']) . 'admin/integration/list/';
+        } else {
+            $path = $this->router->urlFor('config', [], ['success' => $success, 'errors' => $errors]);
+        }
 
         return $response->withHeader('Location', $path)->withStatus(301);
     }

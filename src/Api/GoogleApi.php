@@ -14,6 +14,7 @@ use Google\Service\Drive;
 use Google\Service\Drive\DriveFile;
 use Google\Service\Exception;
 use App\Config;
+use Google\Service\Calendar\EventSource;
 use Psr\Log\LoggerInterface;
 
 class GoogleApi
@@ -21,6 +22,8 @@ class GoogleApi
     private $logger;
 
     public $userId;
+
+    private $email;
 
     private $config;
 
@@ -38,7 +41,7 @@ class GoogleApi
 
     private $timeZone;
 
-    private $code;
+    private $serviceCalendar;
 
     public function __construct(LoggerInterface $logger, Config $config, $userId = null)
     {
@@ -48,20 +51,23 @@ class GoogleApi
 
         $this->credentials = $this->config->get('main', 'google_credentials_file');
         $this->token = $this->config->get($this->userId, 'google_token');
-        $this->redirectUrl = $this->config->get('main', 'google_redirect_url');
+        $this->redirectUrl = $this->config->get('main', 'base_url')
+            . $this->config->get('main', 'google_redirect_rel_url');
+
         $this->calendarId = $this->config->get($this->userId, 'google_calendar_id');
         $this->createMeet = $this->config->get($this->userId, 'create_meet');
         $this->timeZone = $this->config->get($this->userId, 'time_zone');
-
         $this->simlaUrl = $this->config->get($this->userId, 'simla_api_url');
+        $this->email = $this->config->get($this->userId, 'email');
 
         $this->newClient();
+
+        $this->serviceCalendar = new Calendar($this->client);
     }
 
     public function newClient()
     {
         $this->client = new Client();
-        $this->client->setLogger($this->logger);
         $this->client->setApplicationName('Simla Calendar');
         $this->client->addScope(Calendar::CALENDAR_EVENTS);
         $this->client->addScope(Drive::DRIVE_FILE);
@@ -107,73 +113,10 @@ class GoogleApi
 
     public function createEvent($order, $manager, $attachments)
     {
-        $serviceCalendar = new Calendar($this->client);
-
-        $date = $this->prepareDate($order, false);
-
-        if ($this->createMeet) {
-            $attendees = [];
-
-            isset($order->email) ? $attendees[] = [
-                'displayName' => $order->firstName . ' ' . $order->lastName,
-                'email' => $order->email,
-            ] : null;
-
-            isset($manager->email) ? $attendees[] = [
-                'displayName' => $manager->firstName . ' - Manager',
-                'email' => $manager->email,
-            ] : null;
-
-            isset($this->userId) ? $attendees[] = [
-                'displayName' => 'Organizer',
-                'email' => $this->userId,
-            ] : null;
-
-            $order->customerComment = '';
-            $order->managerComment = '';
-        } else {
-            $attendees = [];
-        }
-
-        echo "<pre>", print_r($attendees, true), "</pre>";
-
-        $event = new Event(array(
-            'summary' => 'Order #' . $order->number,
-            'description' =>    '<ul>' .
-                                    '<li><b>Order #</b>' . $order->number . '</li>' .
-                                    '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
-                                    '<li><b>Email: </b>' . $order->email . '</li>' .
-                                    '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
-                                    '<li><b>Customer comment: </b>' . $order->customerComment .
-                                    '<li><b>Manager comment: </b>' . $order->managerComment .
-                                '</ul>',
-            'start' => array(
-                'dateTime' => $date['start'],
-            ),
-            'end' => array(
-                'dateTime' => $date['end'],
-            ),
-            'source' => array(
-                'title' => 'Manage order',
-                'url' => rtrim($this->simlaUrl, '/\\') . '/orders/' . $order->id . '/edit',
-            ),
-            'attachments' => $attachments,
-            'attendees' => $attendees,
-        ));
-
-        if ($this->createMeet) {
-            $solution_key = new ConferenceSolutionKey();
-            $solution_key->setType("hangoutsMeet");
-            $conferenceRequest = new CreateConferenceRequest();
-            $conferenceRequest->setRequestId(random_int(10000000, 99999999));
-            $conferenceRequest->setConferenceSolutionKey($solution_key);
-            $conference = new ConferenceData();
-            $conference->setCreateRequest($conferenceRequest);
-            $event->setConferenceData($conference);
-        }
+        $event = $this->prepareEvent($order, $manager, $attachments);
 
         try {
-            $event = $serviceCalendar->events->insert($this->calendarId, $event, [
+            $event = $this->serviceCalendar->events->insert($this->calendarId, $event, [
                 'supportsAttachments' => true,
                 'conferenceDataVersion' => 1,
                 'sendUpdates' => 'all',
@@ -191,52 +134,10 @@ class GoogleApi
 
     public function updateEvent($order, $manager)
     {
-        $serviceCalendar = new Calendar($this->client);
-
-        $date = $this->prepareDate($order);
-
-        $startDate = new EventDateTime();
-        $startDate->setDateTime($date['start']);
-
-        $endDate = new EventDateTime();
-        $endDate->setDateTime($date['end']);
-
-        $eventId = $order->customFields['event_id'];
+        $event = $this->prepareEvent($order, $manager);
 
         try {
-            $event = $serviceCalendar->events->get($this->calendarId, $eventId);
-        } catch (Exception $exception) {
-            $this->logger->error('Getting event for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
-
-            return false;
-        }
-
-        if ($event->status == 'cancelled') {
-            $this->logger->error("Event for order #$order->number is cancelled");
-            return false;
-        }
-
-        if ($this->createMeet) {
-            $order->customerComment = '';
-            $order->managerComment = '';
-        }
-
-        $event->setDescription(
-            '<ul>' .
-                '<li><b>Order #</b>' . $order->number . '</li>' .
-                '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
-                '<li><b>Email: </b>' . $order->email . '</li>' .
-                '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
-                '<li><b>Customer comment: </b>' . $order->customerComment .
-                '<li><b>Manager comment: </b>' . $order->managerComment .
-            '</ul>',
-        );
-
-        $event->setStart($startDate);
-        $event->setEnd($endDate);
-
-        try {
-            $serviceCalendar->events->update($this->calendarId, $event->getId(), $event, [
+            $this->serviceCalendar->events->update($this->calendarId, $event->getId(), $event, [
                 'supportsAttachments' => true,
                 'conferenceDataVersion' => 1,
                 'sendUpdates' => 'all',
@@ -252,72 +153,88 @@ class GoogleApi
         return true;
     }
 
-    public function authClient($code = null)
+    private function prepareEvent($order, $manager, $attachments = null)
     {
-        if (!empty($accessToken = json_decode($this->token, true))) {
-            $this->client->setAccessToken($accessToken);
-            $userId = $this->getUserFromToken();
+        $date = $this->prepareDate($order);
 
-            if ($userId) {
-                $this->userId = $userId;
+        $startDate = new EventDateTime();
+        $startDate->setDateTime($date['start']);
+
+        $endDate = new EventDateTime();
+        $endDate->setDateTime($date['end']);
+
+        $eventId = $order->customFields['event_id'] ?? false;
+
+        if ($eventId) {
+            try {
+                $event = $this->serviceCalendar->events->get($this->calendarId, $eventId);
+            } catch (Exception $exception) {
+                $this->logger->error('Getting event for order #' . $order->id . ': ' . json_encode($exception->getErrors()));
+
+                return false;
+            }
+
+            if ($event->status == 'cancelled') {
+                $this->logger->error("Event for order #$order->number is cancelled");
+                return false;
+            }
+        } else {
+            $event = new Event();
+            $source = new EventSource();
+            $source->setTitle('Manage order');
+            $source->setUrl(rtrim($this->simlaUrl, '/\\') . '/orders/' . $order->id . '/edit');
+
+            $event->setSummary('Order #' . $order->number);
+            $event->setSource($source);
+            $event->setAttachments($attachments);
+
+            if ($this->createMeet) {
+                $solution_key = new ConferenceSolutionKey();
+                $solution_key->setType("hangoutsMeet");
+                $conferenceRequest = new CreateConferenceRequest();
+                $conferenceRequest->setRequestId(random_int(10000000, 99999999));
+                $conferenceRequest->setConferenceSolutionKey($solution_key);
+                $conference = new ConferenceData();
+                $conference->setCreateRequest($conferenceRequest);
+                $event->setConferenceData($conference);
             }
         }
 
-        if ($this->client->isAccessTokenExpired()) {
-            if ($this->client->getRefreshToken()) {
-                $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
+        if ($this->createMeet) {
+            $attendees = [];
 
-                $this->config->set($this->userId, 'google_token', json_encode($this->client->getAccessToken()));
+            isset($order->email) ? $attendees[] = [
+                'displayName' => $order->firstName . ' ' . $order->lastName,
+                'email' => $order->email,
+            ] : null;
 
-                $this->logger->info('Google token is updated');
-            } else {
-                if ($code == null) {
-                    $this->logger->error('Auth code is absent');
+            isset($manager->email) ? $attendees[] = [
+                'displayName' => $manager->firstName . ' - Manager',
+                'email' => $manager->email,
+            ] : null;
 
-                    return $this->client;
-                }
+            $this->email ? $attendees[] = [
+                'displayName' => 'Organizer',
+                'email' => $this->email,
+            ] : null;
 
-                $accessToken = $this->client->fetchAccessTokenWithAuthCode($code);
-                $this->client->setAccessToken($accessToken);
-
-                if (array_key_exists('error', $accessToken)) {
-                    throw new Exception(join(', ', $accessToken));
-
-                    $this->config->set($this->userId, 'google_token', '');
-                    $this->logger->error('Error -> logged out');
-                } else {
-                    $token = $this->client->getAccessToken();
-                    $userId = $this->getUserFromToken();
-
-                    if ($userId) {
-                        $this->userId = $userId;
-                    }
-
-                    if ($this->userId) {
-                        $this->config->set($this->userId, 'google_token', json_encode($token));
-                        $this->logger->info('Google token is stored');
-                    } else {
-                        $this->logger->error('Can not receive your e-mail from google api!');
-                    }
-                }
-            }
+            $event->setAttendees($attendees);
         }
 
-        return $this->client;
-    }
+        $event->setDescription(
+            '<ul>' .
+                '<li><b>Name: </b>' . $order->firstName . ' ' . $order->lastName . '</li>' .
+                '<li><b>Email: </b>' . $order->email . '</li>' .
+                '<li><b>Created at: </b>' . date_format($order->createdAt, 'Y-m-d H:i:s') . '</li>' .
+                '<li><b>Customer comment: </b>' . $order->customerComment .
+                '<li><b>Manager comment: </b>' . $order->managerComment .
+            '</ul>',
+        );
 
-    public function getUserFromToken() {
-        $data = $this->client->verifyIdToken();
+        $event->setStart($startDate);
+        $event->setEnd($endDate);
 
-        if (
-            $data
-            && isset($data['email_verified'])
-            && $data['email_verified'] == 1
-        ) {
-            return $data['email'];
-        }
-
-        return false;
+        return $event;
     }
 
     private function prepareDate($order)
@@ -348,5 +265,67 @@ class GoogleApi
         }
 
         return $date;
+    }
+
+    public function authClient($code = null)
+    {
+        $accessToken = json_decode($this->token, true);
+
+        if (!empty($accessToken)) {
+            $this->client->setAccessToken($accessToken);
+        }
+
+        if ($this->client->isAccessTokenExpired()) {
+            if ($this->client->getRefreshToken()) {
+                $this->client->fetchAccessTokenWithRefreshToken($this->client->getRefreshToken());
+
+                $this->config->set($this->userId, 'google_token', json_encode($this->client->getAccessToken()));
+
+                $this->logger->info($this->userId . ': Google token is updated');
+            } else {
+                if ($code == null) {
+
+                    return $this->client;
+                }
+
+                $accessToken = $this->client->fetchAccessTokenWithAuthCode($code);
+                $this->client->setAccessToken($accessToken);
+
+                if (array_key_exists('error', $accessToken)) {
+                    throw new Exception(join(', ', $accessToken));
+
+                    $this->config->set($this->userId, 'google_token', '');
+                    $this->logger->error('Error -> logged out');
+                } else {
+                    $token = $this->client->getAccessToken();
+                    $this->email = $this->getUserFromToken();
+                    $this->userId = md5($this->email);
+
+                    if ($this->userId !== md5(0) && $this->userId !== md5('')) {
+                        $this->config->set($this->userId, 'google_token', json_encode($token));
+                        $this->config->set($this->userId, 'email', $this->email);
+                        $this->logger->info($this->userId . ': Google token is stored');
+                    } else {
+                        $this->logger->error('Can not receive e-mail from google api');
+                    }
+                }
+            }
+        }
+
+        return $this->client;
+    }
+
+    public function getUserFromToken() {
+        $data = $this->client->verifyIdToken();
+
+        if (
+            $data
+            && isset($data['email_verified'])
+            && $data['email_verified'] == 1
+        ) {
+            return $data['email'];
+        }
+
+        return false;
     }
 }
