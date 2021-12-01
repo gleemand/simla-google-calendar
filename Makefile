@@ -23,9 +23,9 @@ down:
 
 sync:
 	@echo "==> SYNC - Executing sync command $(ENV)"
-	@$(COMMAND) -f docker-compose.dev.yml run --rm --no-deps php bin/console app:sync
+	@$(COMMAND) -f docker-compose.dev.yml run --rm --no-deps /usr/local/bin/php bin/console app:sync
 
 histreset:
 	@echo "==> HISTRESET - Executing history reset command $(ENV)"
-	@$(COMMAND) -f docker-compose.dev.yml run --rm --no-deps php bin/console app:reset
+	@$(COMMAND) -f docker-compose.dev.yml run --rm --no-deps /usr/local/bin/php bin/console app:reset
 
