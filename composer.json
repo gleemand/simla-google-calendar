@@ -22,6 +22,7 @@
             "Drive",
             "Calendar",
             "Oauth2"
-        ]
+        ],
+        "compile-whitelist": ["retailcrm/api-client-php"]
     }
 }

@@ -36,18 +36,19 @@ class HomeAction
         session_start();
 
         if (isset($_SESSION['userId']) && $_SESSION['userId'] !== md5(0) && $_SESSION['userId'] !== md5('')) {
-
-            return $response->withHeader('Location', 'config')->withStatus(301);
-        } else {
             session_write_close();
 
-            $authUrl = $this->googleApi->generateAuthUrl();
-
-            return $this->view->render($response, 'login.twig', [
-                'authUrl' => $authUrl,
-                'alert' => $route['alert'],
-                'message' => $route['message'],
-            ]);
+            return $response->withHeader('Location', 'config')->withStatus(301);
         }
+
+        session_write_close();
+
+        $authUrl = $this->googleApi->generateAuthUrl();
+
+        return $this->view->render($response, 'login.twig', [
+            'authUrl' => $authUrl,
+            'alert' => $route['alert'] ?? null,
+            'message' => $route['message'] ?? null,
+        ]);
     }
 }

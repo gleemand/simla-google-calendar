@@ -12,8 +12,6 @@ use Slim\Interfaces\RouteParserInterface;
 
 class ConfigAction
 {
-    private $logger;
-
     private $config;
 
     private $view;
@@ -27,7 +25,6 @@ class ConfigAction
         RouteParserInterface $router
     )
     {
-        $this->logger = $logger;
         $this->config = $config;
         $this->view = $view;
         $this->router = $router;
@@ -36,8 +33,8 @@ class ConfigAction
     public function __invoke(ServerRequestInterface $request, ResponseInterface $response, array $args)
     {
         $settings = [];
-        $errors = $request->getQueryParams()['errors'];
-        $success = $request->getQueryParams()['success'];
+        $errors = $request->getQueryParams()['errors'] ?? null;
+        $success = $request->getQueryParams()['success'] ?? null;
         session_start();
 
         $post = (array)$request->getParsedBody();
@@ -64,20 +61,18 @@ class ConfigAction
                 'errors' => $errors,
                 'success' => $success,
             ]);
-        } else {
-            session_write_close();
-
-            $route = [
-                'name' => 'home',
-                'alert' => 'red',
-                'message' => 'You are not logged in',
-            ];
-
-            $path = $this->router->urlFor($route['name'], [], ['alert' => $route['alert'], 'message' => $route['message']]);
-
-            return $response->withHeader('Location', $path)->withStatus(301);
         }
 
+        session_write_close();
 
+        $route = [
+            'name' => 'home',
+            'alert' => 'red',
+            'message' => 'You are not logged in',
+        ];
+
+        $path = $this->router->urlFor($route['name'], [], ['alert' => $route['alert'], 'message' => $route['message']]);
+
+        return $response->withHeader('Location', $path)->withStatus(301);
     }
 }

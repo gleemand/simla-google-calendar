@@ -30,7 +30,7 @@ class HistoryReset
             return false;
         }
 
-        $this->logger->info($this->userId . ': HystoryReset starting...');
+        $this->logger->info($this->userId . ': HistoryReset starting...');
 
         $this->simlaApi = new SimlaApi($this->logger, $this->config, $this->userId);
 

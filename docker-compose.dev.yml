@@ -1,0 +1,29 @@
+version: '3.3'
+
+services:
+  nginx:
+    container_name: retailcrm-googlecalendar-nginx-dev
+    env_file:
+      - .env.dev
+    links:
+      - php-fpm
+    networks:
+      internal:
+        ipv4_address: 192.168.222.5
+
+  php-fpm:
+    container_name: retailcrm-googlecalendar-php-fpm-dev
+    build:
+      context: ./docker/php
+      dockerfile: fpm/dev/Dockerfile
+    networks:
+      - internal
+      - default
+
+networks:
+  internal:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.222.0/28

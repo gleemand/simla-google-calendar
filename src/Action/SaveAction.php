@@ -57,29 +57,28 @@ class SaveAction
                 $errors[] = 'URL is not correct';
             }
 
-            if (
-                htmlspecialchars($settings['simla_api_key'])
-                && preg_match('/^[a-zA-Z0-9]+/', htmlspecialchars($settings['simla_api_key']))
-            ) {
+            if (htmlspecialchars($settings['simla_api_key'])) {
                 $this->config->set($userId, 'simla_api_key', htmlspecialchars($settings['simla_api_key']));
             } else {
-                $errors[] = 'API key is not correct';
+                $errors[] = 'API key is empty';
             }
 
-            if (
-                htmlspecialchars($settings['simla_order_status_code'])
-                && preg_match('/^[a-zA-Z0-9]+/', htmlspecialchars($settings['simla_order_status_code']))
-            ) {
+            if (htmlspecialchars($settings['simla_order_status_code'])) {
                 $this->config->set($userId, 'simla_order_status_code', htmlspecialchars($settings['simla_order_status_code']));
             } else {
-                $errors[] = 'Status code is not correct';
+                $errors[] = 'Status code is empty';
             }
 
-            $this->config->set($userId, 'google_calendar_id', htmlspecialchars($settings['google_calendar_id']));
-            $this->config->set($userId, 'time_zone', htmlspecialchars($settings['time_zone']));
-            $this->config->set($userId, 'create_meet', htmlspecialchars($settings['create_meet']));
+            if (htmlspecialchars($settings['google_calendar_id'])) {
+                $this->config->set($userId, 'google_calendar_id', htmlspecialchars($settings['google_calendar_id']));
+            } else {
+                $errors[] = 'Calendar ID is empty';
+            }
 
-            if (count($errors) == 0) {
+            $this->config->set($userId, 'time_zone', htmlspecialchars($settings['time_zone']));
+            $this->config->set($userId, 'create_meet', htmlspecialchars($settings['create_meet'] ?? 0));
+
+            if (count($errors) === 0) {
 
                 if (!$this->config->get($userId, 'simla_connected')) {
                     $simlaApi = new SimlaApi($this->logger, $this->config, $userId);

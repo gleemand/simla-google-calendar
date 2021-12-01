@@ -12,7 +12,6 @@ use App\Api\SimlaApi;
 use App\Api\GoogleApi;
 use App\Command\HistoryResetCommand;
 use App\Command\SyncCommand;
-use App\Command\LogoutCommand;
 use Slim\App;
 use Slim\Factory\AppFactory;
 use Slim\Views\Twig;
@@ -28,7 +27,7 @@ $containerBuilder->addDefinitions([
     },
     LoggerInterface::class => function () {
         $logger = new Logger('Log');
-        $handler = new RotatingFileHandler(__DIR__ . '/../log/log.log', 30,  Logger::DEBUG);
+        $handler = new RotatingFileHandler(__DIR__ . '/../logs/log.log', 30,  Logger::DEBUG);
         $formatter = new LineFormatter(null, null, false, true);
         $handler->setFormatter($formatter);
         $logger->pushHandler($handler);
@@ -61,12 +60,6 @@ $containerBuilder->addDefinitions([
     },
     SyncCommand::class => function (ContainerInterface $c) {
         return new SyncCommand(
-            $c->get(LoggerInterface::class),
-            $c->get(Config::class)
-        );
-    },
-    LogoutCommand::class => function (ContainerInterface $c) {
-        return new LogoutCommand(
             $c->get(LoggerInterface::class),
             $c->get(Config::class)
         );

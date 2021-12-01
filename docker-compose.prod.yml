@@ -1,0 +1,15 @@
+version: '3.3'
+
+services:
+  nginx:
+    container_name: retailcrm-googlecalendar-nginx-prod
+    env_file:
+      - .env.prod
+    links:
+      - php-fpm
+
+  php-fpm:
+    container_name: retailcrm-googlecalendar-php-fpm-prod
+    build:
+      context: ./docker/php
+      dockerfile: fpm/prod/Dockerfile
